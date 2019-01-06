@@ -1,0 +1,48 @@
+cabal: Entering directory '/var/folders/z4/m4fp_m6x5l996hstvrj5jzz40000gn/T/cabal-tmp-27347/aeson-pretty-0.8.7'
+Configuring aeson-pretty-0.8.7...
+clang-5.0: warning: argument unused during compilation: '-nopie' [-Wunused-command-line-argument]
+Preprocessing library for aeson-pretty-0.8.7..
+Building library for aeson-pretty-0.8.7..
+[1 of 1] Compiling Data.Aeson.Encode.Pretty ( Data/Aeson/Encode/Pretty.hs, dist/dist-sandbox-63396b44/build/Data/Aeson/Encode/Pretty.o )
+
+Data/Aeson/Encode/Pretty.hs:58:1: warning: [-Wdeprecations]
+    Module ‘Data.Aeson.Encode’ is deprecated:
+      Use Data.Aeson or Data.Aeson.Text instead
+   |
+58 | import qualified Data.Aeson.Encode as Aeson
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Data/Aeson/Encode/Pretty.hs:175:21: warning: [-Wdeprecations]
+    In the use of ‘encodeToTextBuilder’
+    (imported from Data.Aeson.Encode):
+    Deprecated: "Use Data.Aeson or Data.Aeson.Text instead"
+    |
+175 |     go v          = Aeson.encodeToTextBuilder v
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Data/Aeson/Encode/Pretty.hs:196:3: warning: [-Wdeprecations]
+    In the use of ‘encodeToTextBuilder’
+    (imported from Data.Aeson.Encode):
+    Deprecated: "Use Data.Aeson or Data.Aeson.Text instead"
+    |
+196 |   Aeson.encodeToTextBuilder (toJSON k) <> pKeyValSep st <> fromValue st v
+    |   ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Data/Aeson/Encode/Pretty.hs:205:20: warning: [-Wdeprecations]
+    In the use of ‘encodeToTextBuilder’
+    (imported from Data.Aeson.Encode):
+    Deprecated: "Use Data.Aeson or Data.Aeson.Text instead"
+    |
+205 |     | otherwise -> Aeson.encodeToTextBuilder $ Number x
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+ignoring (possibly broken) abi-depends field for packages
+Preprocessing executable 'aeson-pretty' for aeson-pretty-0.8.7..
+Building executable 'aeson-pretty' for aeson-pretty-0.8.7..
+[1 of 2] Compiling Paths_aeson_pretty ( dist/dist-sandbox-63396b44/build/aeson-pretty/autogen/Paths_aeson_pretty.hs, dist/dist-sandbox-63396b44/build/aeson-pretty/aeson-pretty-tmp/Paths_aeson_pretty.o )
+[2 of 2] Compiling Main             ( cli-tool/Main.hs, dist/dist-sandbox-63396b44/build/aeson-pretty/aeson-pretty-tmp/Main.o )
+Linking dist/dist-sandbox-63396b44/build/aeson-pretty/aeson-pretty ...
+clang-5.0: warning: argument unused during compilation: '-nopie' [-Wunused-command-line-argument]
+clang-5.0: warning: argument unused during compilation: '-nopie' [-Wunused-command-line-argument]
+Installing library in /Users/christian.henry/coding/haskell/apertivo/frontend/.cabal-sandbox/lib/x86_64-osx-ghc-8.4.3/aeson-pretty-0.8.7-4mPpA5lsJPwHfsMQHPunq
+Installing executable aeson-pretty in /Users/christian.henry/coding/haskell/apertivo/frontend/.cabal-sandbox/bin
+cabal: Leaving directory '/var/folders/z4/m4fp_m6x5l996hstvrj5jzz40000gn/T/cabal-tmp-27347/aeson-pretty-0.8.7'

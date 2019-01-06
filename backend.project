@@ -1,0 +1,4 @@
+compiler: ghc
+packages:
+  common/
+  backend/

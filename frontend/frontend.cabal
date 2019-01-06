@@ -14,12 +14,67 @@ category:            Web
 build-type:          Simple
 cabal-version:       >=1.10
 
+-- executable frontend
+--   main-is:             Main.hs
+--   ghc-options:         -Wall -O2 -threaded -rtsopts -with-rtsopts=-N
+--   exposed-modules:
+--     Main
+--     ServantReflexClient
+--   build-depends:        base >=4.9 && <4.12
+--                         , aeson
+--                         , common
+--                         , containers
+--                         , http-client
+--                         , jsaddle-warp
+--                         , mtl
+--                         , servant
+--                         , servant-reflex
+--                         , reflex-dom
+--                         , text
+--                         , time
+--                         , uuid
+--   hs-source-dirs:      src
+--   default-language:    Haskell2010
+
+library
+  hs-source-dirs: src
+  build-depends: base
+               , aeson
+               , common
+               , containers
+               , http-client
+               , jsaddle-warp
+               , mtl
+               , servant
+               , servant-reflex
+               , reflex-dom
+               , text
+               , time
+               , uuid
+  exposed-modules:
+    Main
+    ServantReflexClient
+  ghc-options: -Wall
+
 executable frontend
-  main-is:             Main.hs
-  ghc-options:         -Wall -O2 -threaded -rtsopts -with-rtsopts=-N
-  -- other-extensions:    
-  build-depends:       base >=4.9 && <4.12
-                     , common
-                     , reflex-dom
-  hs-source-dirs:      src
-  default-language:    Haskell2010
+  main-is: Main.hs
+  hs-source-dirs: src
+  build-depends: base
+               , common
+               , aeson
+               , bifunctors
+               , common
+               , containers
+               , http-client
+               , jsaddle-warp
+               , mtl
+               , reflex-dom
+               , servant
+               , servant-reflex
+               , text
+               , time
+               , uuid
+  --TODO: Make these ghc-options optional
+  ghc-options: -threaded
+  if os(darwin)
+     ghc-options: -dynamic

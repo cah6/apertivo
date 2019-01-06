@@ -1,0 +1,63 @@
+cabal: Entering directory '../common'
+Configuring common-0.1.0.0...
+clang-5.0: warning: argument unused during compilation: '-nopie' [-Wunused-command-line-argument]
+Preprocessing library for common-0.1.0.0..
+Building library for common-0.1.0.0..
+[1 of 3] Compiling Common.Helper    ( src/Common/Helper.hs, dist/dist-sandbox-63396b44/build/Common/Helper.o )
+
+src/Common/Helper.hs:3:1: warning: [-Wunused-imports]
+    The import of ‘FromJSON’ from module ‘Data.Aeson’ is redundant
+  |
+3 | import Data.Aeson (FromJSON (..), Value (String))
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Common/Helper.hs:5:1: warning: [-Wunused-imports]
+    The qualified import of ‘Data.Aeson’ is redundant
+      except perhaps to import instances from ‘Data.Aeson’
+    To import instances alone, use: import Data.Aeson()
+  |
+5 | import qualified Data.Aeson as Aeson
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Common/Helper.hs:13:9: warning: [-Wname-shadowing]
+    This binding for ‘x’ shadows the existing binding
+      bound at src/Common/Helper.hs:11:28
+   |
+13 |   Right x -> pure x
+   |         ^
+[2 of 3] Compiling Common.Dto       ( src/Common/Dto.hs, dist/dist-sandbox-63396b44/build/Common/Dto.o )
+
+src/Common/Dto.hs:8:1: warning: [-Wunused-imports]
+    The import of ‘Data.Aeson.Types’ is redundant
+      except perhaps to import instances from ‘Data.Aeson.Types’
+    To import instances alone, use: import Data.Aeson.Types()
+  |
+8 | import Data.Aeson.Types
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Common/Dto.hs:11:1: warning: [-Wunused-imports]
+    The import of ‘breakOn, intercalate’
+    from module ‘Data.Text’ is redundant
+   |
+11 | import Data.Text (Text, pack, breakOn, intercalate, unpack)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/Common/Dto.hs:13:1: warning: [-Wunused-imports]
+    The import of ‘Data.Time.Calendar’ is redundant
+      except perhaps to import instances from ‘Data.Time.Calendar’
+    To import instances alone, use: import Data.Time.Calendar()
+   |
+13 | import Data.Time.Calendar (Day(..))
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[3 of 3] Compiling Common.ServantRoutes ( src/Common/ServantRoutes.hs, dist/dist-sandbox-63396b44/build/Common/ServantRoutes.o )
+
+src/Common/ServantRoutes.hs:7:1: warning: [-Wunused-imports]
+    The import of ‘Data.Text’ is redundant
+      except perhaps to import instances from ‘Data.Text’
+    To import instances alone, use: import Data.Text()
+  |
+7 | import Data.Text (Text)
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+ignoring (possibly broken) abi-depends field for packages
+Installing library in /Users/christian.henry/coding/haskell/apertivo/frontend/.cabal-sandbox/lib/x86_64-osx-ghc-8.4.3/common-0.1.0.0-8bu4zvyt4j64OFsHSe1DrH
+cabal: Leaving directory '../common'
