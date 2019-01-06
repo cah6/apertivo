@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -52,14 +53,58 @@ scheduleInput initial =
     elClass "div" "tile is-vertical is-10 is-parent" $ mdo
       let eAdd = AddAnother <$ domEvent Click btnAddAnother
           eScheduleChanged = leftmost $ getScheduleCardEvent dynMapCardResult : [eAdd]
-      newBools <- foldDyn reduceScheduleCardEvent initialMaybeMap eScheduleChanged
-      dynMapCardResult <- listWithKeyShallowDiff initialMap (updated newBools) singleScheduleCard
+      newBools <- foldDyn reduceScheduleCardEvent initialMap eScheduleChanged
+      dynMapCardResult <- listWithKey2 newBools singleScheduleCard
       (btnAddAnother, _)  <- elClass' "button" "button" $ text "Add another"
       let dynSchedules = dynMapCardResult >>= getScheduleCardSchedules
       return dynSchedules
     where
   initialMap = M.fromList (zip [(0 :: Int) ..] initial)
-  initialMaybeMap = Just <$> initialMap
+  -- initialMaybeMap = Just <$> initialMap
+
+listWithKey2 :: forall t k v m a. (Ord k, MonadWidget t m) => Dynamic t (M.Map k v) -> (k -> v -> m a) -> m (Dynamic t (M.Map k a))
+listWithKey2 vals mkChild = do
+  postBuild <- getPostBuild
+  rec sentVals :: Dynamic t (M.Map k v) <- foldDyn applyMap M.empty changeVals
+      let changeVals :: Event t (M.Map k (Maybe v))
+          changeVals = attachWith diffMapNoEq (current sentVals) $ leftmost
+                         [ updated vals
+                         , tag (current vals) postBuild
+                         ]
+  listWithKeyShallowDiff M.empty changeVals $ \k v0 _ -> do
+    mkChild k v0
+
+singleScheduleCard :: MonadWidget t m => Int -> Schedule -> m (Event t ScheduleCardEvent, Dynamic t Schedule)
+singleScheduleCard num initialSchedule = elClass "div" "tile is-child message" $ do
+  clicked <- elClass "div" "message-header" $ do
+    text $ "Schedule " <> (T.pack . show) (num + 1)
+    (btn, _) <- elClass' "button" "delete" $ blank
+    return $ domEvent Click btn
+  schedule <- elClass "div" "message-body" $ elClass "div" "columns is-multiline" $ do
+    days <- dayOfWeekBtns (_days initialSchedule)
+    timeRange <- elClass "div" "field has-addons" $ do
+      startTime <- elClass "div" "column is-narrow" $ timeSelect initStartTime
+      elClass "div" "column" $ text "to"
+      endTime <- elClass "div" "column is-narrow" $ timeSelect initEndTime
+      return $ TimeRange <$> zipDyn startTime endTime
+    description <- elClass "div" "column is-full" $ textInput (descriptionOptions initialSchedule)
+    return $ Schedule <$> days <*> timeRange <*> _textInput_value description
+  return $ (DeleteOne num <$ clicked, schedule)
+    where
+  (initStartTime, initEndTime) = coerce (_time initialSchedule)
+
+descriptionOptions :: Reflex t => Schedule -> TextInputConfig t
+descriptionOptions initialSchedule = def
+    { _textInputConfig_attributes = constDyn descriptionAttributes
+    , _textInputConfig_initialValue = _scheduleDescription initialSchedule
+    , _textInputConfig_inputType = "text"
+    }
+
+descriptionAttributes :: M.Map T.Text T.Text
+descriptionAttributes = 
+        "class" =: "input" 
+    <>  "type" =: "text" 
+    <>  "placeholder" =: "Short description of deals"
 
 data ScheduleCardEvent = AddAnother | DeleteOne Int deriving Show
 
@@ -75,42 +120,15 @@ getScheduleCardEvent input =
 getScheduleCardSchedules :: Reflex t => M.Map k (a, Dynamic t Schedule) -> Dynamic t [Schedule]
 getScheduleCardSchedules input = sequence $ (snd . snd) <$> M.toList input
 
-reduceScheduleCardEvent :: ScheduleCardEvent -> M.Map Int (Maybe Schedule) -> M.Map Int (Maybe Schedule)
+reduceScheduleCardEvent :: ScheduleCardEvent -> M.Map Int Schedule -> M.Map Int Schedule
 reduceScheduleCardEvent e xs = case e of
   AddAnother ->
     let foldF key _ = max key
         maxKey = M.foldrWithKey foldF (negate (1 :: Int)) xs
         newKey = maxKey + 1
-    in  xs <> (newKey =: Just defaultSchedule)
+    in  xs <> (newKey =: defaultSchedule)
   DeleteOne i ->
     M.delete i xs
-
-singleScheduleCard :: MonadWidget t m => Int -> Schedule -> Event t Schedule -> m (Event t ScheduleCardEvent, Dynamic t Schedule)
-singleScheduleCard num initSchedule _ = elClass "div" "tile is-child message" $ do
-  clicked <- elClass "div" "message-header" $ do
-    text $ "Schedule " <> (T.pack . show) (num + 1)
-    (btn, _) <- elClass' "button" "delete" $ blank
-    return $ domEvent Click btn
-  schedule <- elClass "div" "message-body" $ elClass "div" "columns is-multiline" $ do
-    days <- dayOfWeekBtns (_days initSchedule)
-    timeRange <- elClass "div" "field has-addons" $ do
-      startTime <- elClass "div" "column is-narrow" $ timeSelect initStartTime
-      elClass "div" "column" $ text "to"
-      endTime <- elClass "div" "column is-narrow" $ timeSelect initEndTime
-      return $ TimeRange <$> zipDyn startTime endTime
-    description <- elClass "div" "column is-full" $ textInput descriptionOptions
-    return $ Schedule <$> days <*> timeRange <*> _textInput_value description
-  return $ (DeleteOne num <$ clicked, schedule)
-    where
-  (initStartTime, initEndTime) = coerce (_time initSchedule)
-  descriptionOptions = def
-    { _textInputConfig_attributes = constDyn descriptionAttributes
-    , _textInputConfig_initialValue = _scheduleDescription initSchedule
-    }
-  descriptionAttributes = 
-        "class" =: "input" 
-    <>  "type" =: "text" 
-    <>  "placeholder" =: "Short description of deals"
 
 dayOfWeekBtns :: MonadWidget t m 
   => [DayOfWeek]
