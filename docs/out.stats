@@ -11,7 +11,7 @@ constraints-0.10.1-AQv2dg43g4Z95EMLbkDdp7:116763
 containers-0.5.11.0-GhhPXbBZ8rf1WBQjAVqqMW:239222
 dependent-map-0.2.4.0-DMPMYlmG4cR7elSMvzoKhG:56128
 dependent-sum-0.4.1-67rHSI4dU4Eh1zqJOAHqu:18856
-ghc-prim:                112468
+ghc-prim:                112471
 ghcjs-base-0.2.0.0-1zqNn6nIHQdAmmILf3TTxp:11929
 ghcjs-dom-jsffi-0.9.2.0-GnWNSjUvOFlLG3HjZwWTpH:99560
 ghcjs-prim-0.1.1.0-A1JdvSlggG4AS5cM95oali:7953
@@ -20,7 +20,7 @@ http-media-0.7.1.2-IYRl8xE8KCFEbsTSc3lE1:36364
 http-types-0.12.1-5ouB919OtKF3jMCH8N77cF:20521
 integer-gmp:             6917
 integer-logarithms-1.0.2.1-9ucJbGf50XaJLyDFSbwT2O:7400
-main:                    289606
+main:                    289609
 network-uri-2.6.1.0-6vHdqSfkPCvJuZRl7quooX:594
 primitive-0.6.3.0-EN7G6bIUziYESvlw7SsQBc:1628
 ref-tf-0.4.0.1-I3N9TyOnTSb5BoggGxOx1D:201
@@ -183,7 +183,7 @@ ghc-prim
     GHC.Classes:                        139
     GHC.IntWord64:                      3052
     GHC.Tuple:                          4079
-    GHC.Types:                          75072
+    GHC.Types:                          75075
 
 ghcjs-base-0.2.0.0-1zqNn6nIHQdAmmILf3TTxp
     Data.JSString:                      1506
@@ -236,7 +236,7 @@ integer-logarithms-1.0.2.1-9ucJbGf50XaJLyDFSbwT2O
 main
     CreateModal:                        13808
     FrontendCommon:                     152658
-    Main:                               39042
+    Main:                               39045
     ServantReflexClient:                84098
 
 network-uri-2.6.1.0-6vHdqSfkPCvJuZRl7quooX
@@ -347,5 +347,5 @@ vector-0.12.0.1-1pr78lTTb89JTR1g6hNATq
 
 
 
-packed metadata: 1166046
+packed metadata: 1166043
 
