@@ -18,9 +18,10 @@ import qualified Data.Text as T
 import Control.Monad.Trans (liftIO)
 import Data.Bifunctor (first)
 import Data.Coerce (coerce)
-import Data.List (sortBy)
-import Data.Maybe (listToMaybe)
+import Data.List (intersect, sortBy)
+import Data.Maybe (listToMaybe, mapMaybe)
 import Data.Monoid ((<>))
+import Data.Time.LocalTime (TimeOfDay(..))
 import Data.UUID (toText, UUID)
 import Language.Javascript.JSaddle.Warp
 import Reflex.Dom.Core
@@ -58,14 +59,15 @@ body = mdo
 
 searchTab :: MonadWidget t m => Dynamic t [HappyHour] -> m (Event t HappyHour)
 searchTab xs = elClass "div" "box" $ do
-  eCreate <- b_button "Create new!!"
-  filterVal <- _textInput_value <$> horizontalInput "Filter"
+  eCreate <- b_button "Create New"
+  -- filterVal <- _textInput_value <$> horizontalInput "Search Filters:"
+  dynSearchFilter <- filterSection
   dynMaybeHH <- removingModal ((\_ -> defaultHH) <$> eCreate) createModal
   elClass "table" "table is-bordered" $ do
     el "thead" $
       el "tr" $
         mapM_ (elAttr "th" ("scope" =: "col") . text) cols
-    _ <- mkTableBody (filterHappyHours <$> xs <*> filterVal)
+    _ <- mkTableBody (filterHappyHours <$> xs <*> dynSearchFilter)
     return ()
   elAttr "iframe" (
         "width" =: "600"
@@ -76,6 +78,26 @@ searchTab xs = elClass "div" "box" $ do
     ) blank
   return (switchDyn $ flattenMaybe <$> dynMaybeHH)
 
+filterSection ::  MonadWidget t m => m (Dynamic t SearchFilter)
+filterSection = do 
+  elClass "label" "label is-large" $ text "Filter Results"
+  cityVal <- _textInput_value <$> horizontalInputWithInit "" "City"
+  restaurantVal <- _textInput_value <$> horizontalInputWithInit "" "Restaurant Name"
+  descriptionVal <- _textInput_value <$> horizontalInputWithInit "" "Schedule Description"
+  days <- do 
+    elClass "label" "label" $ text "On Day"
+    elClass "div" "buttons has-addons" $ dayOfWeekBtns []
+  -- timeSelect
+  return $ SearchFilter <$> cityVal <*> restaurantVal <*> descriptionVal <*> days <*> pure Nothing
+
+data SearchFilter = SearchFilter 
+  { _sCity :: T.Text
+  , _sRestaurant :: T.Text
+  , _sScheduleDescription :: T.Text
+  , _sDay :: [DayOfWeek]
+  , _sTime :: Maybe TimeOfDay
+  }
+
 flattenMaybe :: Reflex t => Maybe (Event t a) -> Event t a
 flattenMaybe Nothing  = never
 flattenMaybe (Just a) = a
@@ -83,18 +105,53 @@ flattenMaybe (Just a) = a
 sortByRestaurant :: HappyHour -> HappyHour -> Ordering
 sortByRestaurant a1 a2 = compare (_restaurant a1) (_restaurant a2)
 
-filterHappyHours :: [HappyHour] -> T.Text -> [HappyHour]
-filterHappyHours xs currentTextInput =
+filterHappyHours :: [HappyHour] -> SearchFilter -> [HappyHour]
+filterHappyHours xs searchFilter =
   let
-    containsInput = T.isInfixOf currentTextInput
-    anyScheduleContains :: [Schedule] -> Bool
-    anyScheduleContains = any (containsInput . _scheduleDescription)
-    filterSingle x =
-        containsInput (_restaurant x)
-     || containsInput (_city x)
-     || anyScheduleContains (_schedule x)
+    filterSingle :: HappyHour -> Maybe HappyHour
+    filterSingle x = 
+          cityMatches x (_sCity searchFilter)
+      >>= restaurantMatches (_sRestaurant searchFilter)
+      >>= dayMatches (_sDay searchFilter)
+      >>= schedulesThatContain (_sScheduleDescription searchFilter)
   in
-    filter filterSingle xs
+    mapMaybe filterSingle xs
+
+cityMatches :: HappyHour -> T.Text -> Maybe HappyHour
+cityMatches a cityFilter = boolToMaybe (T.isInfixOf cityFilter (_city a)) a
+
+restaurantMatches :: T.Text -> HappyHour -> Maybe HappyHour
+restaurantMatches restaurantFilter a = boolToMaybe (T.isInfixOf restaurantFilter (_restaurant a)) a
+
+dayMatches :: [DayOfWeek] -> HappyHour -> Maybe HappyHour
+dayMatches daysFilter a = 
+  let dayMatch :: [DayOfWeek] -> Bool
+      dayMatch days = null daysFilter || (not . null . intersect daysFilter) days
+      matchingSchedules :: [Schedule]
+      matchingSchedules = filter (dayMatch . _days) (_schedule a)
+  in  if (length matchingSchedules == length (_schedule a)) 
+        then Just a 
+        else Just $ a { _schedule = matchingSchedules }
+
+anyScheduleContains :: HappyHour -> T.Text -> Bool
+anyScheduleContains x scheduleFilter = any (T.isInfixOf scheduleFilter . _scheduleDescription) (_schedule x)
+
+schedulesThatContain :: T.Text -> HappyHour -> Maybe HappyHour
+schedulesThatContain scheduleFilter a =
+  let scheduleMatch :: Schedule -> Bool
+      scheduleMatch = T.isInfixOf scheduleFilter . _scheduleDescription
+      matchingSchedules :: [Schedule]
+      matchingSchedules = filter scheduleMatch (_schedule a)
+  in  if (length matchingSchedules == length (_schedule a)) 
+        then Just a 
+        else Just $ a { _schedule = matchingSchedules } 
+
+boolToMaybe :: Bool -> a -> Maybe a
+boolToMaybe True a = Just a
+boolToMaybe False _ = Nothing
+
+listToMaybeDef :: [a] -> b -> Maybe b
+listToMaybeDef xs b = boolToMaybe (null xs) b
 
 mkTableBody :: MonadWidget t m => Dynamic t [HappyHour] -> m ()
 mkTableBody xs = do 

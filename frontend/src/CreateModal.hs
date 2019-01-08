@@ -11,7 +11,7 @@
 {-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-module CreateModal(createModal) where
+module CreateModal(createModal, dayOfWeekBtns) where
 
 import qualified Data.Map.Lazy as M
 import qualified Data.Text as T
@@ -81,7 +81,7 @@ singleScheduleCard num initialSchedule = elClass "div" "tile is-child message" $
     (btn, _) <- elClass' "button" "delete" $ blank
     return $ domEvent Click btn
   schedule <- elClass "div" "message-body" $ elClass "div" "columns is-multiline" $ do
-    days <- dayOfWeekBtns (_days initialSchedule)
+    days <- elClass "div" "column is-full" $ elClass "div" "buttons has-addons is-centered" $ dayOfWeekBtns (_days initialSchedule)
     timeRange <- elClass "div" "field has-addons" $ do
       startTime <- elClass "div" "column is-narrow" $ timeSelect initStartTime
       elClass "div" "column" $ text "to"
@@ -133,7 +133,7 @@ reduceScheduleCardEvent e xs = case e of
 dayOfWeekBtns :: MonadWidget t m 
   => [DayOfWeek]
   -> m (Dynamic t [DayOfWeek])
-dayOfWeekBtns initial = elClass "div" "column is-full" $ elClass "div" "buttons has-addons is-centered" $ do
+dayOfWeekBtns initial = do
   days <- mapM singleDayBtn (enabledDays initial)
   return (mapBtnState <$> sequence days)
 

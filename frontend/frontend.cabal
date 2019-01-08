@@ -43,7 +43,9 @@ library
                , common
                , containers
                , http-client
+               , jsaddle
                , jsaddle-warp
+               , lens
                , mtl
                , servant
                , servant-reflex
