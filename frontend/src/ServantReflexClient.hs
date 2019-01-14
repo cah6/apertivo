@@ -31,8 +31,8 @@ import Common.ServantRoutes
 apiClients :: forall t m. (MonadWidget t m) => _
 apiClients = client hhApi (Proxy @m) (Proxy @()) (constDyn url)
   where url :: BaseUrl
-        -- url = BaseFullUrl Https "640ce368.ngrok.io" 443 "/"
-        url = BaseFullUrl Http "localhost" 3000 "/"
+        url = BaseFullUrl Https "f2b7c008.ngrok.io" 443 "/"
+        -- url = BaseFullUrl Http "localhost" 3000 "/"
 
 genCreateHH :: MonadWidget t m
   => Dynamic t (Either T.Text HappyHour)
