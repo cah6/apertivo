@@ -11,7 +11,7 @@ constraints-0.10.1-AQv2dg43g4Z95EMLbkDdp7:116763
 containers-0.5.11.0-GhhPXbBZ8rf1WBQjAVqqMW:239222
 dependent-map-0.2.4.0-DMPMYlmG4cR7elSMvzoKhG:56128
 dependent-sum-0.4.1-67rHSI4dU4Eh1zqJOAHqu:18856
-ghc-prim:                112872
+ghc-prim:                112862
 ghcjs-base-0.2.0.0-1zqNn6nIHQdAmmILf3TTxp:11929
 ghcjs-dom-jsffi-0.9.2.0-GnWNSjUvOFlLG3HjZwWTpH:99560
 ghcjs-prim-0.1.1.0-A1JdvSlggG4AS5cM95oali:7953
@@ -20,14 +20,14 @@ http-media-0.7.1.2-IYRl8xE8KCFEbsTSc3lE1:36364
 http-types-0.12.1-5ouB919OtKF3jMCH8N77cF:20521
 integer-gmp:             6917
 integer-logarithms-1.0.2.1-9ucJbGf50XaJLyDFSbwT2O:7400
-main:                    307616
+main:                    307606
 network-uri-2.6.1.0-6vHdqSfkPCvJuZRl7quooX:594
 primitive-0.6.3.0-EN7G6bIUziYESvlw7SsQBc:1628
 ref-tf-0.4.0.1-I3N9TyOnTSb5BoggGxOx1D:201
 reflex-0.5-F0of3DpR7RECyZ4LjNrpSw:1218180
 reflex-dom-core-0.4-2a86yvKhCSZKEuMoYVKfxR:1266327
 scientific-0.3.6.2-3bGnf1kyXWv6Dpb9HHlxdN:44025
-servant-0.14.1-EtigiSKNbQYGJtb5XbKkci:74004
+servant-0.14.1-EtigiSKNbQYGJtb5XbKkci:74005
 servant-reflex-0.3.3-Gzthtil3nZjIBuQDYlXOG0:298640
 text-1.2.3.0-DJtdEqIKOtKIC6lWl5JFOu:17173
 these-0.7.4-FY8lcpovtsDKIeGwJs4mlh:4409
@@ -183,7 +183,7 @@ ghc-prim
     GHC.Classes:                        139
     GHC.IntWord64:                      3052
     GHC.Tuple:                          4079
-    GHC.Types:                          75476
+    GHC.Types:                          75466
 
 ghcjs-base-0.2.0.0-1zqNn6nIHQdAmmILf3TTxp
     Data.JSString:                      1506
@@ -236,7 +236,7 @@ integer-logarithms-1.0.2.1-9ucJbGf50XaJLyDFSbwT2O
 main
     CreateModal:                        13808
     FrontendCommon:                     170650
-    Main:                               39060
+    Main:                               39050
     ServantReflexClient:                84098
 
 network-uri-2.6.1.0-6vHdqSfkPCvJuZRl7quooX
@@ -300,7 +300,7 @@ scientific-0.3.6.2-3bGnf1kyXWv6Dpb9HHlxdN
 
 servant-0.14.1-EtigiSKNbQYGJtb5XbKkci
     Servant.API.ContentTypes:           620
-    Servant.API.Verbs:                  73384
+    Servant.API.Verbs:                  73385
 
 servant-reflex-0.3.3-Gzthtil3nZjIBuQDYlXOG0
     Servant.Common.BaseUrl:             276161
@@ -347,5 +347,5 @@ vector-0.12.0.1-1pr78lTTb89JTR1g6hNATq
 
 
 
-packed metadata: 1174129
+packed metadata: 1174130
 
