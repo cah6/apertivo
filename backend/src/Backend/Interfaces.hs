@@ -66,8 +66,9 @@ instance (MonadBH m) => MonadCrudHappyHour (BH m) where
   upsertHappyHour uuid hh = 
     let 
       docId = DocId (toText uuid)
+      withoutId = hh { Common.Dto._id = Nothing }
     in
-      void $ indexDocument hhIndex hhMapping defaultIndexDocumentSettings hh docId 
+      void $ indexDocument hhIndex hhMapping defaultIndexDocumentSettings withoutId docId 
 
   getHappyHour uuid = 
     let
@@ -82,6 +83,9 @@ instance (MonadBH m) => MonadCrudHappyHour (BH m) where
       void $ deleteDocument hhIndex hhMapping docId
 
   queryHappyHours qp = do 
-    reply <- searchByIndex hhIndex (mkSearch Nothing Nothing)
+    reply <- searchByIndex hhIndex mkQuery
     liftIO $ putStrLn (show reply)
     return reply
+
+mkQuery :: Search
+mkQuery = (mkSearch Nothing Nothing) { size = Size 10000 }
