@@ -18,8 +18,9 @@ import qualified Data.Text as T
 import Control.Monad.Trans (liftIO)
 import Data.Bifunctor (first)
 import Data.Coerce (coerce)
-import Data.List (intersect, sortBy)
+import Data.List (intersect, sortBy, uncons)
 import Data.Maybe (listToMaybe, mapMaybe)
+import Data.Map (fromList, toList, Map)
 import Data.Monoid ((<>))
 import Data.Time.LocalTime (TimeOfDay(..))
 import Data.UUID (toText, UUID)
@@ -66,7 +67,7 @@ searchTab xs = elClass "div" "box" $ do
   elClass "table" "table is-bordered" $ do
     el "thead" $
       el "tr" $
-        mapM_ (elAttr "th" ("scope" =: "col") . text) cols
+        mapM_ (elAttr "th" ("scope" =: "col" ) . text) cols
     _ <- mkTableBody (filterHappyHours <$> xs <*> dynSearchFilter)
     return ()
   elAttr "iframe" (
@@ -155,7 +156,7 @@ listToMaybeDef xs b = boolToMaybe (null xs) b
 
 mkTableBody :: MonadWidget t m => Dynamic t [HappyHour] -> m ()
 mkTableBody xs = do 
-  let rows = simpleList xs mkRow
+  let rows = simpleList xs makeTableSection
   (eDelete, eEdit) <- flattenDynList <$> el "tbody" rows
   _ <- deleteHH (coerce <$> eDelete)
   dynMaybeHH <- removingModal (openModalEvent xs eEdit) createModal
@@ -176,58 +177,62 @@ isId uuid a = case (_id a) of
   Nothing -> False
   Just b -> uuid == b
 
--- handleRowAction :: MonadWidget t m => Dynamic t [HappyHour] -> RowAction t -> m (Event t ())
--- handleRowAction dxs (eDelete, eEdit) = do
-  
---   removingModal eEdit createModal
---   return eDeleted
-
--- -- fanEither eRowAction
---   let
---     go :: MonadWidget t m => RowAction -> m (Event t ())
---     go (DeleteClicked duuid, EditClicked euuid) = do 
---       eDeleted <- deleteHH $ fmap (\ra -> duuid) eRowAction
---       return eDeleted
---   in
---     return (go <$> eRowAction)
-
--- mkBuiltInTable :: MonadWidget t m => Dynamic t [HappyHour] -> m ()
--- mkBuiltInTable dynHHs =
---   let
---     dRowsList = zip [(1 :: Integer)..] <$> dynHHs
---     dRows = M.fromList <$> dRowsList
---     dCols = M.fromList $ zip cols mkRow
---   in 
---     tableDynAttr "td" dCols dRows undefined >> return ()
-
 cols :: [T.Text]
 cols = ["Restaurant", "City", "Time", "Description", "Action"]
-
--- data RowAction =
---     DeleteClicked UUID
---   | EditClicked UUID
 
 type RowAction t = (Event t DeleteClicked, Event t EditClicked)
 
 newtype DeleteClicked = DeleteClicked UUID
 newtype EditClicked = EditClicked UUID
 
-mkRow :: MonadWidget t m
+makeTableSection :: MonadWidget t m
       => Dynamic t HappyHour
       -> m (RowAction t)
-mkRow dA = flattenDynList <$> simpleList (_schedule <$> dA) (\schedule ->
-  let
-    mkLinkAttrs hh = ("href" =: _link hh)
-    c1 = elDynAttr "a" (mkLinkAttrs <$> dA) (dynText (_restaurant <$> dA))
-    c2 = dynText $ _city <$> dA
-    c3 = dynText $ times <$> schedule
-    c4 = dynText $ _scheduleDescription <$> schedule
-    c5 = do
-      eEdit <- icon "edit"
-      eDelete <- icon "trash-alt"
-      return (DeleteClicked <$> tagA dA eDelete, EditClicked <$> tagA dA eEdit)
-  in
-    row [c1, c2, c3, c4] c5)
+makeTableSection dA = do
+  let dS = _schedule <$> dA
+      dScheduleWithKey = fmap (fromList . zip [(0 :: Int)..]) dS
+  dEvents <- listWithKey dScheduleWithKey (createRows dA)
+  return (coerceMap dEvents)
+
+coerceMap :: Reflex t 
+  => Dynamic t (Map k (Event t a, Event t b))
+  -> (Event t a, Event t b)
+coerceMap dMap = flattenDynList $ fmap (map snd . toList) dMap
+
+createRows :: MonadWidget t m 
+  => Dynamic t HappyHour
+  -> Int
+  -> Dynamic t Schedule
+  -> m (RowAction t)
+createRows dHH 0 dS = createHeadRow dHH dS
+createRows dHH _ dS = createTailRow dS
+
+createHeadRow :: MonadWidget t m 
+  => Dynamic t HappyHour
+  -> Dynamic t Schedule
+  -> m (RowAction t)
+createHeadRow dA dS = el "tr" $ do
+  let mkLinkAttrs hh = ("href" =: _link hh)
+      mkRowspan hh = ("rowspan" =: (T.pack $ show $ length $ _schedule hh)) <> ("style" =: "vertical-align:middle")
+  c1 <- elDynAttr "td" (mkRowspan <$> dA) $ elDynAttr "a" (mkLinkAttrs <$> dA) (dynText (_restaurant <$> dA))
+  c2 <- elDynAttr "td" (mkRowspan <$> dA) $ dynText $ _city <$> dA
+  c3 <- el "td" $ dynText $ times <$> dS
+  c4 <- el "td" $ dynText $ _scheduleDescription <$> dS
+  c5 <- elDynAttr "td" (mkRowspan <$> dA) $ do
+    eEdit <- icon "edit"
+    eDelete <- icon "trash-alt"
+    return (DeleteClicked <$> tagA dA eDelete, EditClicked <$> tagA dA eEdit)
+  return c5
+
+-- These rows don't need as many columns, since those are already "filled" by
+-- the rowspan in head row.
+createTailRow :: MonadWidget t m 
+  => Dynamic t Schedule
+  -> m (RowAction t)
+createTailRow dS = el "tr" $ do
+  c3 <- el "td" $ dynText $ times <$> dS
+  c4 <- el "td" $ dynText $ _scheduleDescription <$> dS
+  return (never, never)
 
 flattenDynList :: Reflex t => Dynamic t [(Event t a, Event t b)] -> (Event t a, Event t b)
 flattenDynList dxs = 
