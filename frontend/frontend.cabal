@@ -51,6 +51,7 @@ library
                , servant-reflex
                , reflex-dom
                , text
+               , these
                , time
                , uuid
   exposed-modules:

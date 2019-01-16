@@ -58,11 +58,15 @@ genCreateHH :<|> genUpdateHH :<|> genDeleteHH :<|> _ :<|> genQueryHH = apiClient
 
 createHH :: MonadWidget t m
   => Event t HappyHour
-  -> m (Event t ())
+  -> m (Event t UUID)
 createHH eHH = do
   dHH <- holdDyn defaultHH eHH
   eCreateResult <- genCreateHH (Right <$> dHH) (() <$ eHH)
-  return $ () <$ eCreateResult
+  return $ fmapMaybe simplifyReqResult eCreateResult
+
+simplifyReqResult :: ReqResult () a -> Maybe a
+simplifyReqResult (ResponseSuccess _ a _) = Just a
+simplifyReqResult _ = Nothing
 
 updateHH :: MonadWidget t m
   => Event t HappyHour

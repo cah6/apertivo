@@ -13,12 +13,10 @@
 module Main where
 
 import qualified Data.Text as T
-
--- import Control.Monad (join, void)
 import Control.Monad.Trans (liftIO)
 import Data.Bifunctor (first)
 import Data.Coerce (coerce)
-import Data.List (intersect, sortBy, uncons)
+import Data.List (intersect, sortBy)
 import Data.Maybe (listToMaybe, mapMaybe)
 import Data.Map (fromList, toList, Map)
 import Data.Monoid ((<>))
@@ -50,34 +48,76 @@ frontendHead = do
   return ()
 
 body :: forall t m. MonadWidget t m => m ()
-body = mdo
+body = do
   started <- getPostBuild
-  eQueryResult <- queryHH started
-  dHHs <- holdDyn [defaultHH] eQueryResult
-  eHappyHourCreated <- searchTab (sortBy sortByRestaurant <$> dHHs)
-  _ <- createHH eHappyHourCreated
+  eQueryResults <- queryHH started
+  _ <- searchTab (sortBy sortByRestaurant <$> eQueryResults)
   return ()
 
-searchTab :: MonadWidget t m => Dynamic t [HappyHour] -> m (Event t HappyHour)
-searchTab xs = elClass "div" "box" $ do
-  eCreate <- b_button "Create New"
-  -- filterVal <- _textInput_value <$> horizontalInput "Search Filters:"
+searchTab :: MonadWidget t m => Event t [HappyHour] -> m ()
+searchTab eInitQueryResults = elClass "div" "box" $ do
+  eCreateClicked <- b_button "Create New"
   dynSearchFilter <- filterSection
-  dynMaybeHH <- removingModal ((\_ -> defaultHH) <$> eCreate) createModal
-  elClass "table" "table is-bordered" $ do
+  dynMaybeHH <- removingModal ((\_ -> defaultHH) <$> eCreateClicked) createModal
+  let eCreateSubmitted = switchDyn $ flattenMaybe <$> dynMaybeHH
+      eQueryResults = QueryResults <$> eInitQueryResults
+  eNewUUID <- createHH eCreateSubmitted
+  -- let eCreatedWithUUID = (flattenMaybe . sequence) $ attachPromptlyDynWith zipServerResponse dynMaybeHH eNewUUID
+  eCreatedWithUUID <- alignLatest zipServerResponse (defaultHH {_schedule = []}) eCreateSubmitted eNewUUID
+  elClass "table" "table is-bordered" $ mdo
     el "thead" $
       el "tr" $
         mapM_ (elAttr "th" ("scope" =: "col" ) . text) cols
-    _ <- mkTableBody (filterHappyHours <$> xs <*> dynSearchFilter)
+    eEditOrDelete <- mkTableBody (filterHappyHours <$> newlyUpdatedRows <*> dynSearchFilter)
+    let eTableAction = leftmost [eQueryResults, SingleCreated <$> eCreatedWithUUID, eEditOrDelete]
+    newlyUpdatedRows <- foldDyn reduceTableUpdate ([defaultHH {_schedule = []}]) eTableAction
     return ()
-  elAttr "iframe" (
+  return ()
+
+-- "Zips" in time: [the event for create response from modal, the response from server with UUID]
+zipServerResponse :: HappyHour -> UUID -> HappyHour
+zipServerResponse hh newUUID = hh { _id = Just newUUID } 
+
+embedId :: UUID -> HappyHour
+embedId uuid = defaultHH { _id = Just uuid }
+
+alignLatest :: MonadWidget t m
+  => (a -> b -> c) 
+  -> a 
+  -> Event t a 
+  -> Event t b 
+  -> m (Event t c)
+alignLatest f defA eA eB = do 
+  dynLeft <- holdDyn defA eA
+  return $ attachPromptlyDynWith f dynLeft eB
+
+reduceTableUpdate :: TableUpdate -> [HappyHour] -> [HappyHour]
+reduceTableUpdate update xs = case update of 
+  QueryResults newXs -> 
+    newXs
+  SingleCreated x -> 
+    sortBy sortByRestaurant (x : xs)
+  SingleEdited newVal ->
+    let (beforeEdit, withAndAfterEdit) = break (\hh -> _id hh == _id newVal) xs
+    in  beforeEdit ++ (newVal : tail withAndAfterEdit)
+  SingleDeleted deletedUUID -> 
+    let (beforeDelete, withAndAfterDelete) = break (\hh -> _id hh == Just deletedUUID) xs
+    in  beforeDelete ++ (tail withAndAfterDelete)
+
+mkGoogleMapsFrame :: MonadWidget t m => m ()
+mkGoogleMapsFrame = elAttr "iframe" (
         "width" =: "600"
     <> "height" =: "450"
     <> "frameborder" =: "0"
     <> "style" =: "border:0"
     <> "src" =: "https://www.google.com/maps/embed/v1/place?key=AIzaSyDxM3_sjDAP1kDHzbRMkZ6Ky7BYouXfVOs&q=place_id:ChIJMSuIlbnSJIgRbUFj__-VGdA&q=ChIJMUfEOWEtO4gRddDKWmgPMpI"
     ) blank
-  return (switchDyn $ flattenMaybe <$> dynMaybeHH)
+
+data TableUpdate = 
+    QueryResults [HappyHour]
+  | SingleDeleted UUID
+  | SingleEdited HappyHour
+  | SingleCreated HappyHour
 
 filterSection ::  MonadWidget t m => m (Dynamic t SearchFilter)
 filterSection = do 
@@ -154,14 +194,17 @@ boolToMaybe False _ = Nothing
 listToMaybeDef :: [a] -> b -> Maybe b
 listToMaybeDef xs b = boolToMaybe (null xs) b
 
-mkTableBody :: MonadWidget t m => Dynamic t [HappyHour] -> m ()
+mkTableBody :: MonadWidget t m => Dynamic t [HappyHour] -> m (Event t TableUpdate)
 mkTableBody xs = do 
   let rows = simpleList xs makeTableSection
   (eDelete, eEdit) <- flattenDynList <$> el "tbody" rows
   _ <- deleteHH (coerce <$> eDelete)
   dynMaybeHH <- removingModal (openModalEvent xs eEdit) createModal
-  _ <- updateHH (switchDyn $ flattenMaybe <$> dynMaybeHH)
-  return ()
+  let eDeleteHappened = fmap (\(DeleteClicked uuid) -> SingleDeleted uuid) eDelete
+      eEditForServant = switchDyn $ flattenMaybe <$> dynMaybeHH
+      eEditHappened = SingleEdited <$> eEditForServant
+  _ <- updateHH eEditForServant
+  return $ leftmost [eDeleteHappened, eEditHappened]
 
 openModalEvent :: (Reflex t) 
   => Dynamic t [HappyHour] 
@@ -205,7 +248,7 @@ createRows :: MonadWidget t m
   -> Dynamic t Schedule
   -> m (RowAction t)
 createRows dHH 0 dS = createHeadRow dHH dS
-createRows dHH _ dS = createTailRow dS
+createRows _   _ dS = createTailRow dS
 
 createHeadRow :: MonadWidget t m 
   => Dynamic t HappyHour
@@ -214,10 +257,10 @@ createHeadRow :: MonadWidget t m
 createHeadRow dA dS = el "tr" $ do
   let mkLinkAttrs hh = ("href" =: _link hh)
       mkRowspan hh = ("rowspan" =: (T.pack $ show $ length $ _schedule hh)) <> ("style" =: "vertical-align:middle")
-  c1 <- elDynAttr "td" (mkRowspan <$> dA) $ elDynAttr "a" (mkLinkAttrs <$> dA) (dynText (_restaurant <$> dA))
-  c2 <- elDynAttr "td" (mkRowspan <$> dA) $ dynText $ _city <$> dA
-  c3 <- el "td" $ dynText $ times <$> dS
-  c4 <- el "td" $ dynText $ _scheduleDescription <$> dS
+  _c1 <- elDynAttr "td" (mkRowspan <$> dA) $ elDynAttr "a" (mkLinkAttrs <$> dA) (dynText (_restaurant <$> dA))
+  _c2 <- elDynAttr "td" (mkRowspan <$> dA) $ dynText $ _city <$> dA
+  _c3 <- el "td" $ dynText $ times <$> dS
+  _c4 <- el "td" $ dynText $ _scheduleDescription <$> dS
   c5 <- elDynAttr "td" (mkRowspan <$> dA) $ do
     eEdit <- icon "edit"
     eDelete <- icon "trash-alt"
@@ -230,8 +273,8 @@ createTailRow :: MonadWidget t m
   => Dynamic t Schedule
   -> m (RowAction t)
 createTailRow dS = el "tr" $ do
-  c3 <- el "td" $ dynText $ times <$> dS
-  c4 <- el "td" $ dynText $ _scheduleDescription <$> dS
+  _c3 <- el "td" $ dynText $ times <$> dS
+  _c4 <- el "td" $ dynText $ _scheduleDescription <$> dS
   return (never, never)
 
 flattenDynList :: Reflex t => Dynamic t [(Event t a, Event t b)] -> (Event t a, Event t b)
