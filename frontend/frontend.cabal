@@ -42,8 +42,10 @@ library
                , aeson
                , common
                , containers
+               , ghcjs-dom
                , http-client
                , jsaddle
+               , jsaddle-dom
                , jsaddle-warp
                , lens
                , mtl

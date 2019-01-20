@@ -25,6 +25,7 @@ import Data.UUID (toText, UUID)
 import Language.Javascript.JSaddle.Warp
 import Reflex.Dom.Core
 
+import Autocomplete
 import Common.Dto
 import CreateModal
 import FrontendCommon
@@ -32,6 +33,9 @@ import ServantReflexClient
 
 main :: IO ()
 main = run 3003 $ mainWidgetWithHead frontendHead (prerender (text "Loading...") body)
+
+-- main :: IO ()
+-- main = run 3003 $ mainWidgetWithHead frontendHead (prerender (text "Loading...") autocompleteBoxMain)
 
 frontendHead :: forall t m. MonadWidget t m => m ()
 frontendHead = do
@@ -44,6 +48,9 @@ frontendHead = do
               <> "rel" =: "stylesheet"
               <> "integrity" =: "sha384-B4dIYHKNBt8Bc12p+WXckhzcICo0wtJAoU8YZTY5qE0Id1GSseTk6S+L3BlXeVIU"
               <> "crossorigin" =: "anonymous"
+              ) blank
+  elAttr "script" ("src" =: "https://maps.googleapis.com/maps/api/js?key=AIzaSyBZiVkgP8la1GHQw_ZJXNQl0N8dGCOW62c&libraries=places"
+              <> "type" =: "text/javascript"
               ) blank
   return ()
 
@@ -63,7 +70,7 @@ searchTab eInitQueryResults = elClass "div" "box" $ do
       eQueryResults = QueryResults <$> eInitQueryResults
   eNewUUID <- createHH eCreateSubmitted
   -- let eCreatedWithUUID = (flattenMaybe . sequence) $ attachPromptlyDynWith zipServerResponse dynMaybeHH eNewUUID
-  eCreatedWithUUID <- alignLatest zipServerResponse (defaultHH {_schedule = []}) eCreateSubmitted eNewUUID
+  eCreatedWithUUID <- traceEvent "latest created" <$> alignLatest zipServerResponse (defaultHH {_schedule = []}) eCreateSubmitted eNewUUID
   elClass "table" "table is-bordered" $ mdo
     el "thead" $
       el "tr" $
@@ -104,14 +111,14 @@ reduceTableUpdate update xs = case update of
     let (beforeDelete, withAndAfterDelete) = break (\hh -> _id hh == Just deletedUUID) xs
     in  beforeDelete ++ (tail withAndAfterDelete)
 
-mkGoogleMapsFrame :: MonadWidget t m => m ()
-mkGoogleMapsFrame = elAttr "iframe" (
-        "width" =: "600"
-    <> "height" =: "450"
-    <> "frameborder" =: "0"
-    <> "style" =: "border:0"
-    <> "src" =: "https://www.google.com/maps/embed/v1/place?key=AIzaSyDxM3_sjDAP1kDHzbRMkZ6Ky7BYouXfVOs&q=place_id:ChIJMSuIlbnSJIgRbUFj__-VGdA&q=ChIJMUfEOWEtO4gRddDKWmgPMpI"
-    ) blank
+-- mkGoogleMapsFrame :: MonadWidget t m => m ()
+-- mkGoogleMapsFrame = elAttr "iframe" (
+--         "width" =: "600"
+--     <> "height" =: "450"
+--     <> "frameborder" =: "0"
+--     <> "style" =: "border:0"
+--     <> "src" =: "https://www.google.com/maps/embed/v1/place?key=AIzaSyDxM3_sjDAP1kDHzbRMkZ6Ky7BYouXfVOs&q=place_id:ChIJMSuIlbnSJIgRbUFj__-VGdA&q=ChIJMUfEOWEtO4gRddDKWmgPMpI"
+--     ) blank
 
 data TableUpdate = 
     QueryResults [HappyHour]
