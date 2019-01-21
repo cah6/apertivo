@@ -17,6 +17,7 @@ import qualified Data.Map.Lazy as M
 import qualified Data.Text as T
 
 import Data.Coerce (coerce)
+import Data.Maybe (isJust)
 import Data.Time
 import Reflex.Dom
 
@@ -28,7 +29,8 @@ createModal initial = do
   elClass "div" "modal-background" blank
   elClass "div" "modal-card" $ do
     eClose <- elClass "header" "modal-card-head" $ do
-      elClass "p" "modal-card-title" $ text "Create a happy hour"
+      let titleText = if (isJust $ _id initial) then "Edit" else "Create"
+      elClass "p" "modal-card-title" $ text titleText
       b_delete
     dynHappyHour <- elClass "section" "modal-card-body" (createFields initial)
     (eSubmit, eCancel) <- elClass "footer" "modal-card-foot" $ do

@@ -13,6 +13,7 @@
 module Main where
 
 import qualified Data.Text as T
+import Control.Monad (void)
 import Control.Monad.Trans (liftIO)
 import Data.Bifunctor (first)
 import Data.Coerce (coerce)
@@ -39,7 +40,7 @@ main = run 3003 $ mainWidgetWithHead frontendHead (prerender (text "Loading...")
 
 frontendHead :: forall t m. MonadWidget t m => m ()
 frontendHead = do
-  el "title" $ text "Happy Hours"
+  el "title" $ text "Apertivo"
   elAttr "link" ("href" =: "https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.1/css/bulma.min.css"
               <> "rel" =: "stylesheet"
               <> "type" =: "text/css"
@@ -56,22 +57,29 @@ frontendHead = do
 
 body :: forall t m. MonadWidget t m => m ()
 body = do
+  _ <- makeHero
   started <- getPostBuild
   eQueryResults <- queryHH started
   _ <- searchTab (sortBy sortByRestaurant <$> eQueryResults)
   return ()
 
+makeHero :: MonadWidget t m => m ()
+makeHero = 
+  elClass "section" "hero is-primary is-bold" $ 
+    elClass "div" "hero-body" $ void $ do
+      elClass "h1" "title" $ text "Apertivo"
+      elClass "h2" "subtitle" $ text "The Happy Hour Finder"
+
 searchTab :: MonadWidget t m => Event t [HappyHour] -> m ()
-searchTab eInitQueryResults = elClass "div" "box" $ do
-  eCreateClicked <- b_button "Create New"
-  dynSearchFilter <- filterSection
+searchTab eInitQueryResults = elClass "div" "box" $ mdo
+  (dynSearchFilter, eCreateClicked) <- filterSection
   dynMaybeHH <- removingModal ((\_ -> defaultHH) <$> eCreateClicked) createModal
   let eCreateSubmitted = switchDyn $ flattenMaybe <$> dynMaybeHH
       eQueryResults = QueryResults <$> eInitQueryResults
   eNewUUID <- createHH eCreateSubmitted
   -- let eCreatedWithUUID = (flattenMaybe . sequence) $ attachPromptlyDynWith zipServerResponse dynMaybeHH eNewUUID
   eCreatedWithUUID <- traceEvent "latest created" <$> alignLatest zipServerResponse (defaultHH {_schedule = []}) eCreateSubmitted eNewUUID
-  elClass "table" "table is-bordered" $ mdo
+  elClass "table" "table is-fullwidth" $ mdo
     el "thead" $
       el "tr" $
         mapM_ (elAttr "th" ("scope" =: "col" ) . text) cols
@@ -83,10 +91,7 @@ searchTab eInitQueryResults = elClass "div" "box" $ do
 
 -- "Zips" in time: [the event for create response from modal, the response from server with UUID]
 zipServerResponse :: HappyHour -> UUID -> HappyHour
-zipServerResponse hh newUUID = hh { _id = Just newUUID } 
-
-embedId :: UUID -> HappyHour
-embedId uuid = defaultHH { _id = Just uuid }
+zipServerResponse hh newUUID = hh { _id = Just newUUID }
 
 alignLatest :: MonadWidget t m
   => (a -> b -> c) 
@@ -126,17 +131,53 @@ data TableUpdate =
   | SingleEdited HappyHour
   | SingleCreated HappyHour
 
-filterSection ::  MonadWidget t m => m (Dynamic t SearchFilter)
+filterSection ::  MonadWidget t m => m (Dynamic t SearchFilter, Event t ())
 filterSection = do 
-  elClass "label" "label is-large" $ text "Filter Results"
-  cityVal <- _textInput_value <$> horizontalInputWithInit "" "City"
-  restaurantVal <- _textInput_value <$> horizontalInputWithInit "" "Restaurant Name"
-  descriptionVal <- _textInput_value <$> horizontalInputWithInit "" "Schedule Description"
-  days <- do 
-    elClass "label" "label" $ text "On Day"
-    elClass "div" "buttons has-addons" $ dayOfWeekBtns []
-  -- timeSelect
-  return $ SearchFilter <$> cityVal <*> restaurantVal <*> descriptionVal <*> days <*> pure Nothing
+  elClass "div" "columns" $ do 
+    restaurantVal <- elClass "div" "column is-narrow" $ filterBubbleInput "Restaurant"
+    cityVal <- elClass "div" "column is-narrow" $ filterBubbleCity "Detroit" ["San Francisco", "Detroit"]
+    days <- elClass "div" "column is-narrow" $ filterBubbleDay Monday
+      -- elClass "div" "buttons has-addons" $ dayOfWeekBtns []
+    descriptionVal <- elClass "div" "column" $ filterBubbleInput "Description filter"
+    eCreateClicked <- elClass "div" "column" $ createButton "Create New"
+    return $ (SearchFilter <$> cityVal <*> restaurantVal <*> descriptionVal <*> fmap (\d -> [d]) days <*> pure Nothing, eCreateClicked)
+
+createButton :: MonadWidget t m => T.Text -> m (Event t ())
+createButton s = do
+  (e, _) <- elClass' "button" "button is-primary is-pulled-right is-inverted" $ text s
+  return $ domEvent Click e
+
+filterBubbleInput :: MonadWidget t m => T.Text -> m (Dynamic t T.Text)
+filterBubbleInput initial = do
+  ti <- textInput $ def 
+    { _textInputConfig_attributes = constDyn ("class" =: "input is-rounded is-primary" <> "placeholder" =: initial)
+    }
+  return $ _textInput_value ti
+
+filterBubbleCity :: (MonadWidget t m) 
+  => T.Text
+  -> [T.Text]
+  -> m (Dynamic t T.Text)
+filterBubbleCity initial options = elClass "div" "select is-primary is-rounded" $ do
+  dd <- dropdown initial (constDyn $ fromList (zip options options)) def
+  return (_dropdown_value dd)
+
+-- filterBubbleDay :: (MonadWidget t m) 
+--   => DayOfWeek
+--   -> m (Dynamic t DayOfWeek)
+-- filterBubbleDay initial = elClass "div" "select is-rounded is-primary" $ el "select" $ do 
+--   mapM (\day -> el "option" $ text "day") [Sunday .. Saturday]
+--   return $ constDyn Monday
+
+filterBubbleDay :: (MonadWidget t m) 
+  => DayOfWeek
+  -> m (Dynamic t DayOfWeek)
+filterBubbleDay initial = elClass "div" "select is-rounded is-primary" $ do
+  dd <- dropdown initial (constDyn $ toShowMap [Sunday .. Saturday]) def
+  return (_dropdown_value dd)
+
+toShowMap :: (Ord a, Show a) => [a] -> Map a T.Text
+toShowMap xs = fromList $ zip xs (T.pack . show <$> xs)
 
 data SearchFilter = SearchFilter 
   { _sCity :: T.Text
@@ -169,7 +210,10 @@ cityMatches :: HappyHour -> T.Text -> Maybe HappyHour
 cityMatches a cityFilter = boolToMaybe (T.isInfixOf cityFilter (_city a)) a
 
 restaurantMatches :: T.Text -> HappyHour -> Maybe HappyHour
-restaurantMatches restaurantFilter a = boolToMaybe (T.isInfixOf restaurantFilter (_restaurant a)) a
+restaurantMatches restaurantFilter a = 
+  let filterR = T.toLower restaurantFilter
+      targetR = T.toLower (_restaurant a)
+  in  boolToMaybe (T.isInfixOf filterR targetR) a
 
 dayMatches :: [DayOfWeek] -> HappyHour -> Maybe HappyHour
 dayMatches daysFilter a = 
@@ -187,7 +231,7 @@ anyScheduleContains x scheduleFilter = any (T.isInfixOf scheduleFilter . _schedu
 schedulesThatContain :: T.Text -> HappyHour -> Maybe HappyHour
 schedulesThatContain scheduleFilter a =
   let scheduleMatch :: Schedule -> Bool
-      scheduleMatch = T.isInfixOf scheduleFilter . _scheduleDescription
+      scheduleMatch = T.isInfixOf (T.toLower scheduleFilter) . T.toLower . _scheduleDescription
       matchingSchedules :: [Schedule]
       matchingSchedules = filter scheduleMatch (_schedule a)
   in  if (length matchingSchedules == length (_schedule a)) 
