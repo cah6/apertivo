@@ -147,7 +147,7 @@ filterSection = do
     time <- elClass "div" "column is-narrow" $ timeSelect (TimeOfDay 17 0 0)
     descriptionVal <- elClass "div" "column" $ filterBubbleInput "Description filter"
     eCreateClicked <- elClass "div" "column" $ createButton "Create New"
-    return $ (SearchFilter <$> cityVal <*> restaurantVal <*> descriptionVal <*> fmap (\d -> [d]) days <*> pure Nothing, eCreateClicked)
+    return $ (SearchFilter <$> cityVal <*> restaurantVal <*> descriptionVal <*> fmap (\d -> [d]) days <*> (Just <$> time), eCreateClicked)
 
 createButton :: MonadWidget t m => T.Text -> m (Event t ())
 createButton s = do
@@ -172,9 +172,11 @@ filterBubbleCity initial options = elClass "div" "select is-primary is-rounded" 
 filterBubbleDay :: (MonadWidget t m) 
   => DayOfWeek
   -> m (Dynamic t DayOfWeek)
-filterBubbleDay initial = elClass "div" "select is-rounded is-primary" $ do
-  dd <- dropdown initial (constDyn $ toShowMap [Sunday .. Saturday]) def
-  return (_dropdown_value dd)
+filterBubbleDay initial = elClass "div" "field has-addons" $ do 
+  elClass "div" "control" $ elClass "a" "button is-rounded is-primary is-outlined" $ iconNoButton "check"
+  elClass "div" "control" $ elClass "div" "select is-rounded is-primary" $ do
+    dd <- dropdown initial (constDyn $ toShowMap [Sunday .. Saturday]) def
+    return (_dropdown_value dd)
 
 toShowMap :: (Ord a, Show a) => [a] -> Map a T.Text
 toShowMap xs = fromList $ zip xs (T.pack . show <$> xs)
@@ -202,6 +204,7 @@ filterHappyHours xs searchFilter =
           cityMatches x (_sCity searchFilter)
       >>= restaurantMatches (_sRestaurant searchFilter)
       >>= dayMatches (_sDay searchFilter)
+      >>= timeMatches (_sTime searchFilter)      
       >>= schedulesThatContain (_sScheduleDescription searchFilter)
   in
     mapMaybe filterSingle xs
@@ -224,6 +227,18 @@ dayMatches daysFilter a =
   in  if (length matchingSchedules == length (_schedule a)) 
         then Just a 
         else Just $ a { _schedule = matchingSchedules }
+
+timeMatches :: Maybe TimeOfDay -> HappyHour -> Maybe HappyHour
+timeMatches Nothing a = Just a 
+timeMatches (Just timeFilter) a = 
+  let matchingSchedules :: [Schedule]
+      matchingSchedules = filter (isTimeBetween timeFilter . _time) (_schedule a)
+  in  if (length matchingSchedules == length (_schedule a)) 
+        then Just a 
+        else Just $ a { _schedule = matchingSchedules }
+
+isTimeBetween :: TimeOfDay -> TimeRange -> Bool
+isTimeBetween time (TimeRange (start, end)) = time >= start && time <= end
 
 anyScheduleContains :: HappyHour -> T.Text -> Bool
 anyScheduleContains x scheduleFilter = any (T.isInfixOf scheduleFilter . _scheduleDescription) (_schedule x)
@@ -421,3 +436,6 @@ icon :: MonadWidget t m => T.Text -> m (Event t ())
 icon name = do
   (e, _) <- elClass "a" "button is-white is-small" $ elClass' "span" "icon" $ elClass "i" ("fas fa-" <> name) blank
   return $ domEvent Click e
+
+iconNoButton :: MonadWidget t m => T.Text -> m ()
+iconNoButton name = elClass "span" "icon" $ elClass "i" ("fas fa-" <> name) blank
