@@ -81,8 +81,15 @@ searchTab eInitQueryResults = elClass "div" "box" $ mdo
   eCreatedWithUUID <- traceEvent "latest created" <$> alignLatest zipServerResponse (defaultHH {_schedule = []}) eCreateSubmitted eNewUUID
   elClass "table" "table is-fullwidth" $ mdo
     el "thead" $
-      el "tr" $
-        mapM_ (elAttr "th" ("scope" =: "col" ) . text) cols
+      el "tr" $ do 
+        elAttr "th" ("scope" =: "col") $ text "Restaurant"
+        elAttr "th" ("scope" =: "col") $ text "City"
+        elAttr "th" ("scope" =: "col") $ text "Days"
+        elAttr "th" ("scope" =: "col") $ text "Time"
+        elAttr "th" ("scope" =: "col") $ text "Description"
+        elAttr "th" ("scope" =: "col") $ text "Action"
+        return ()
+        -- mapM_ (elAttr "th" ("scope" =: "col" ) . text) cols
     eEditOrDelete <- mkTableBody (filterHappyHours <$> newlyUpdatedRows <*> dynSearchFilter)
     let eTableAction = leftmost [eQueryResults, SingleCreated <$> eCreatedWithUUID, eEditOrDelete]
     newlyUpdatedRows <- foldDyn reduceTableUpdate ([defaultHH {_schedule = []}]) eTableAction
@@ -137,7 +144,7 @@ filterSection = do
     restaurantVal <- elClass "div" "column is-narrow" $ filterBubbleInput "Restaurant"
     cityVal <- elClass "div" "column is-narrow" $ filterBubbleCity "Detroit" ["San Francisco", "Detroit"]
     days <- elClass "div" "column is-narrow" $ filterBubbleDay Monday
-      -- elClass "div" "buttons has-addons" $ dayOfWeekBtns []
+    time <- elClass "div" "column is-narrow" $ timeSelect (TimeOfDay 17 0 0)
     descriptionVal <- elClass "div" "column" $ filterBubbleInput "Description filter"
     eCreateClicked <- elClass "div" "column" $ createButton "Create New"
     return $ (SearchFilter <$> cityVal <*> restaurantVal <*> descriptionVal <*> fmap (\d -> [d]) days <*> pure Nothing, eCreateClicked)
@@ -161,13 +168,6 @@ filterBubbleCity :: (MonadWidget t m)
 filterBubbleCity initial options = elClass "div" "select is-primary is-rounded" $ do
   dd <- dropdown initial (constDyn $ fromList (zip options options)) def
   return (_dropdown_value dd)
-
--- filterBubbleDay :: (MonadWidget t m) 
---   => DayOfWeek
---   -> m (Dynamic t DayOfWeek)
--- filterBubbleDay initial = elClass "div" "select is-rounded is-primary" $ el "select" $ do 
---   mapM (\day -> el "option" $ text "day") [Sunday .. Saturday]
---   return $ constDyn Monday
 
 filterBubbleDay :: (MonadWidget t m) 
   => DayOfWeek
@@ -272,7 +272,7 @@ isId uuid a = case (_id a) of
   Just b -> uuid == b
 
 cols :: [T.Text]
-cols = ["Restaurant", "City", "Time", "Description", "Action"]
+cols = ["Restaurant", "City", "Days", "Time", "Description", "Action"]
 
 type RowAction t = (Event t DeleteClicked, Event t EditClicked)
 
@@ -310,13 +310,14 @@ createHeadRow dA dS = el "tr" $ do
       mkRowspan hh = ("rowspan" =: (T.pack $ show $ length $ _schedule hh)) <> ("style" =: "vertical-align:middle")
   _c1 <- elDynAttr "td" (mkRowspan <$> dA) $ elDynAttr "a" (mkLinkAttrs <$> dA) (dynText (_restaurant <$> dA))
   _c2 <- elDynAttr "td" (mkRowspan <$> dA) $ dynText $ _city <$> dA
-  _c3 <- el "td" $ dynText $ times <$> dS
-  _c4 <- el "td" $ dynText $ _scheduleDescription <$> dS
-  c5 <- elDynAttr "td" (mkRowspan <$> dA) $ do
+  _c3 <- compactDayOfWeekBtns $ _days <$> dS
+  _c4 <- elAttr "td" ("style" =: "white-space:nowrap;vertical-align:middle") $ dynText $ time <$> dS
+  _c5 <- elAttr "td" ("style" =: "vertical-align:middle") $ dynText $ _scheduleDescription <$> dS
+  c6 <- elDynAttr "td" (mkRowspan <$> dA) $ do
     eEdit <- icon "edit"
     eDelete <- icon "trash-alt"
     return (DeleteClicked <$> tagA dA eDelete, EditClicked <$> tagA dA eEdit)
-  return c5
+  return c6
 
 -- These rows don't need as many columns, since those are already "filled" by
 -- the rowspan in head row.
@@ -324,9 +325,40 @@ createTailRow :: MonadWidget t m
   => Dynamic t Schedule
   -> m (RowAction t)
 createTailRow dS = el "tr" $ do
-  _c3 <- el "td" $ dynText $ times <$> dS
-  _c4 <- el "td" $ dynText $ _scheduleDescription <$> dS
+  _c3 <- compactDayOfWeekBtns $ _days <$> dS
+  _c4 <- elAttr "td" ("style" =: "white-space:nowrap;vertical-align:middle") $ dynText $ time <$> dS
+  _c5 <- elAttr "td" ("style" =: "vertical-align:middle") $ dynText $ _scheduleDescription <$> dS
   return (never, never)
+
+compactDayOfWeekBtns :: MonadWidget t m 
+  => Dynamic t [DayOfWeek]
+  -> m ()
+compactDayOfWeekBtns initial = elAttr "td" ("style" =: "min-width:260px;vertical-align:middle") $ do
+  days <- elClass "div" "buttons has-addons is-pulled-left" $ simpleList (enabledDays <$> initial) staticSingleDayButton 
+  return ()
+
+staticSingleDayButton :: (MonadWidget t m)
+  => Dynamic t (DayOfWeek, Bool)
+  -> m ()
+staticSingleDayButton dynTuple = do
+  (btn, _) <- elDynAttr' "span" (staticBtnAttr . snd <$> dynTuple) $ dynText (printDayShort . fst <$> dynTuple)
+  return ()
+
+staticBtnAttr :: Bool -> Map T.Text T.Text
+staticBtnAttr True =
+  "class" =: "button is-small is-rounded is-static is-selected is-active is-primary"
+staticBtnAttr False =
+  "class" =:  "button is-small is-rounded is-static"
+
+printDayShort :: DayOfWeek -> T.Text 
+printDayShort day = case day of
+  Monday -> "M"
+  Tuesday -> "T"
+  Wednesday -> "W"
+  Thursday -> "T"
+  Friday -> "F"
+  Saturday -> "S"
+  Sunday -> "S"
 
 flattenDynList :: Reflex t => Dynamic t [(Event t a, Event t b)] -> (Event t a, Event t b)
 flattenDynList dxs = 
@@ -342,13 +374,11 @@ uuidText a = case _id a of
   Nothing -> "Nothing"
   Just x -> toText x
 
-times :: Schedule -> T.Text
-times Schedule{ _days, _time } =
-  let
-    days = printDays _days
-    time = printTimeRange _time
-  in
-    days <> ", " <> time
+days :: Schedule -> T.Text
+days Schedule{ _days, _time } = printDays _days
+
+time :: Schedule -> T.Text
+time Schedule{ _days, _time } = printTimeRange _time
 
 flattenHH :: HappyHour -> [HappyHour]
 flattenHH HappyHour{_schedule, ..} = map (\s -> HappyHour {_schedule = [s], .. } ) _schedule
@@ -389,5 +419,5 @@ putDebugLnE e mkStr = performEvent_ (liftIO . putStrLn . mkStr <$> e)
 
 icon :: MonadWidget t m => T.Text -> m (Event t ())
 icon name = do
-  (e, _) <- elClass' "span" "icon" $ elClass "i" ("fas fa-" <> name) blank
+  (e, _) <- elClass "a" "button is-white is-small" $ elClass' "span" "icon" $ elClass "i" ("fas fa-" <> name) blank
   return $ domEvent Click e

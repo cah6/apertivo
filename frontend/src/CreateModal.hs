@@ -11,7 +11,7 @@
 {-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-module CreateModal(createModal, dayOfWeekBtns) where
+module CreateModal(createModal, dayOfWeekBtns, timeSelect, enabledDays) where
 
 import qualified Data.Map.Lazy as M
 import qualified Data.Text as T
@@ -51,8 +51,8 @@ createFields initial = elClass "div" "box" $ do
  
 scheduleInput :: MonadWidget t m => [Schedule] -> m (Dynamic t [Schedule])
 scheduleInput initial =
-  elClass "div" "tile is-ancestor" $
-    elClass "div" "tile is-vertical is-10 is-parent" $ mdo
+  elClass "div" "tile is-ancestor is-10" $
+    elClass "div" "tile is-vertical is-parent" $ mdo
       let eAdd = AddAnother <$ domEvent Click btnAddAnother
           eScheduleChanged = leftmost $ getScheduleCardEvent dynMapCardResult : [eAdd]
       newBools <- foldDyn reduceScheduleCardEvent initialMap eScheduleChanged
@@ -139,7 +139,7 @@ dayOfWeekBtns initial = do
   days <- mapM singleDayBtn (enabledDays initial)
   return (mapBtnState <$> sequence days)
 
--- Map of ALL days where only inputs are True
+-- Get list of all days where inputs are True and rest are False
 enabledDays :: [DayOfWeek] -> [(DayOfWeek, Bool)]
 enabledDays xs = 
   let defaults = M.fromList $ zip [Sunday .. Saturday] (repeat False) 
@@ -160,9 +160,9 @@ mapBtnState = map fst . filter (\tuple -> snd tuple == True)
 singleDayBtnAttrs :: Bool -> M.Map T.Text T.Text
 singleDayBtnAttrs isSelected = if isSelected
   then
-    "class" =: "button is-active is-selected"
+    "class" =: "button is-rounded is-selected is-active"
   else
-    "class" =: "button"
+    "class" =: "button is-rounded"
 
 -- Time selector functions
 
@@ -190,7 +190,7 @@ timeOfDaySelect :: MonadWidget t m
   -> m (Dynamic t TimeOfDay)
 timeOfDaySelect initial =
   elClass "div" "control" $
-    elClass "span" "select" $ do
+    elClass "span" "select is-rounded is-primary" $ do
       selected <- dropdown initial (constDyn timeOptions) def
       return (_dropdown_value selected)
 
@@ -199,7 +199,7 @@ amPmSelect :: MonadWidget t m
   -> m (Dynamic t AmPm)
 amPmSelect initial =
   elClass "p" "control" $
-    elClass "span" "select" $ do
+    elClass "span" "select is-rounded is-primary" $ do
       selected <- dropdown initial (constDyn amPmMap) def
       return (_dropdown_value selected)
 
