@@ -20,7 +20,6 @@ import Data.String (fromString)
 import Language.Javascript.JSaddle
 import Language.Javascript.JSaddle.Object
 import Language.Javascript.JSaddle.Value
-import JSDOM.Generated.HTMLInputElement (HTMLInputElement(..))
 import GHCJS.DOM.Element
 import Reflex.Dom.Core hiding (Element)
 

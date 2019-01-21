@@ -26,7 +26,6 @@ import Data.UUID (toText, UUID)
 import Language.Javascript.JSaddle.Warp
 import Reflex.Dom.Core
 
-import Autocomplete
 import Common.Dto
 import CreateModal
 import FrontendCommon
