@@ -42,6 +42,7 @@ library
                , aeson
                , common
                , containers
+               , file-embed
                , ghcjs-dom
                , http-client
                , jsaddle
@@ -64,13 +65,14 @@ executable frontend
   main-is: Main.hs
   hs-source-dirs: src
   build-depends: base
-               , common
                , aeson
                , bifunctors
                , common
                , containers
+               , file-embed
                , http-client
                , jsaddle-warp
+               , lens
                , mtl
                , reflex-dom
                , servant

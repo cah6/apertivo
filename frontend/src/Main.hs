@@ -9,18 +9,24 @@
 {-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Main where
 
+import Prelude hiding (id)
+
 import qualified Data.Text as T
+import Control.Lens.Operators
 import Control.Monad (void)
 import Control.Monad.Trans (liftIO)
 import Data.Bifunctor (first)
 import Data.Coerce (coerce)
+import Data.FileEmbed
 import Data.List (intersect, sortBy)
 import Data.Maybe (listToMaybe, mapMaybe)
 import Data.Map (fromList, toList, Map)
 import Data.Monoid ((<>))
+import Data.Text.Encoding (decodeUtf8)
 import Data.Time.LocalTime (TimeOfDay(..))
 import Data.UUID (toText, UUID)
 import Language.Javascript.JSaddle.Warp
@@ -41,15 +47,7 @@ frontendHead :: forall t m. MonadWidget t m => m ()
 frontendHead = do
   el "title" $ text "Apertivo"
   elAttr "meta" ("name" =: "viewport" <> "content" =: "initial-scale=1.0, width=device-width") blank
-  elAttr "link" ("href" =: "https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.1/css/bulma.min.css"
-              <> "rel" =: "stylesheet"
-              <> "type" =: "text/css"
-              ) blank
-  elAttr "link" ("href" =: "https://use.fontawesome.com/releases/v5.5.0/css/all.css"
-              <> "rel" =: "stylesheet"
-              <> "integrity" =: "sha384-B4dIYHKNBt8Bc12p+WXckhzcICo0wtJAoU8YZTY5qE0Id1GSseTk6S+L3BlXeVIU"
-              <> "crossorigin" =: "anonymous"
-              ) blank
+  el "style" $ text $ decodeUtf8 $(embedFile "../css/mystyles.css")
   -- elAttr "script" ("src" =: "https://maps.googleapis.com/maps/api/js?key=AIzaSyBZiVkgP8la1GHQw_ZJXNQl0N8dGCOW62c&libraries=places"
   --             <> "type" =: "text/javascript"
   --             ) blank
@@ -117,7 +115,7 @@ reduceTableUpdate update xs = case update of
   SingleCreated x -> 
     sortBy sortByRestaurant (x : xs)
   SingleEdited newVal ->
-    let (beforeEdit, withAndAfterEdit) = break (\hh -> _id hh == _id newVal) xs
+    let (beforeEdit, withAndAfterEdit) = break (\hh -> _id hh == newVal ^. id) xs
     in  beforeEdit ++ (newVal : tail withAndAfterEdit)
   SingleDeleted deletedUUID -> 
     let (beforeDelete, withAndAfterDelete) = break (\hh -> _id hh == Just deletedUUID) xs
@@ -328,7 +326,7 @@ createHeadRow dA dS = el "tr" $ do
   _c1 <- elDynAttr "td" (mkRestRow <$> dA) $ elDynAttr "a" (mkLinkAttrs <$> dA) (dynText (_restaurant <$> dA))
   _c2 <- elDynAttr "td" (mkCityRow <$> dA) $ dynText $ _city <$> dA
   _c3 <- compactDayOfWeekBtns $ _days <$> dS
-  _c4 <- elAttr "td" ("style" =: "vertical-align:middle") $ dynText $ time <$> dS
+  _c4 <- elAttr "td" ("style" =: "vertical-align:middle") $ dynText $ printTime <$> dS
   _c5 <- elAttr "td" ("style" =: "vertical-align:middle") $ dynText $ _scheduleDescription <$> dS
   c6 <- elDynAttr "td" (mkActionRow <$> dA) $ do
     eEdit <- icon "edit"
@@ -343,7 +341,7 @@ createTailRow :: MonadWidget t m
   -> m (RowAction t)
 createTailRow dS = el "tr" $ do
   _c3 <- compactDayOfWeekBtns $ _days <$> dS
-  _c4 <- elAttr "td" ("style" =: "vertical-align:middle") $ dynText $ time <$> dS
+  _c4 <- elAttr "td" ("style" =: "vertical-align:middle") $ dynText $ printTime <$> dS
   _c5 <- elAttr "td" ("style" =: "vertical-align:middle") $ dynText $ _scheduleDescription <$> dS
   return (never, never)
 
@@ -394,8 +392,8 @@ uuidText a = case _id a of
 days :: Schedule -> T.Text
 days Schedule{ _days, _time } = printDays _days
 
-time :: Schedule -> T.Text
-time Schedule{ _days, _time } = printTimeRange _time
+printTime :: Schedule -> T.Text
+printTime Schedule{ _days, _time } = printTimeRange _time
 
 flattenHH :: HappyHour -> [HappyHour]
 flattenHH HappyHour{_schedule, ..} = map (\s -> HappyHour {_schedule = [s], .. } ) _schedule
