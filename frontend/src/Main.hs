@@ -40,6 +40,7 @@ main = run 3003 $ mainWidgetWithHead frontendHead (prerender (text "Loading...")
 frontendHead :: forall t m. MonadWidget t m => m ()
 frontendHead = do
   el "title" $ text "Apertivo"
+  elAttr "meta" ("name" =: "viewport" <> "content" =: "initial-scale=1.0, width=device-width") blank
   elAttr "link" ("href" =: "https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.1/css/bulma.min.css"
               <> "rel" =: "stylesheet"
               <> "type" =: "text/css"
@@ -49,9 +50,9 @@ frontendHead = do
               <> "integrity" =: "sha384-B4dIYHKNBt8Bc12p+WXckhzcICo0wtJAoU8YZTY5qE0Id1GSseTk6S+L3BlXeVIU"
               <> "crossorigin" =: "anonymous"
               ) blank
-  elAttr "script" ("src" =: "https://maps.googleapis.com/maps/api/js?key=AIzaSyBZiVkgP8la1GHQw_ZJXNQl0N8dGCOW62c&libraries=places"
-              <> "type" =: "text/javascript"
-              ) blank
+  -- elAttr "script" ("src" =: "https://maps.googleapis.com/maps/api/js?key=AIzaSyBZiVkgP8la1GHQw_ZJXNQl0N8dGCOW62c&libraries=places"
+  --             <> "type" =: "text/javascript"
+  --             ) blank
   return ()
 
 body :: forall t m. MonadWidget t m => m ()
@@ -78,15 +79,15 @@ searchTab eInitQueryResults = elClass "div" "box" $ mdo
   eNewUUID <- createHH eCreateSubmitted
   -- let eCreatedWithUUID = (flattenMaybe . sequence) $ attachPromptlyDynWith zipServerResponse dynMaybeHH eNewUUID
   eCreatedWithUUID <- traceEvent "latest created" <$> alignLatest zipServerResponse (defaultHH {_schedule = []}) eCreateSubmitted eNewUUID
-  elClass "table" "table is-fullwidth" $ mdo
+  elClass "div" "box" $ elClass "div" "table-container" $ elClass "table" "table is-fullwidth" $ mdo
     el "thead" $
       el "tr" $ do 
         elAttr "th" ("scope" =: "col") $ text "Restaurant"
-        elAttr "th" ("scope" =: "col") $ text "City"
-        elAttr "th" ("scope" =: "col") $ text "Days"
+        elAttr "th" ("scope" =: "col" <> "class" =: "is-hidden-mobile") $ text "City"
+        elAttr "th" ("scope" =: "col" <> "class" =: "is-hidden-mobile") $ text "Days"
         elAttr "th" ("scope" =: "col") $ text "Time"
         elAttr "th" ("scope" =: "col") $ text "Description"
-        elAttr "th" ("scope" =: "col") $ text "Action"
+        elAttr "th" ("scope" =: "col" <> "class" =: "is-hidden-mobile") $ text "Action"
         return ()
         -- mapM_ (elAttr "th" ("scope" =: "col" ) . text) cols
     eEditOrDelete <- mkTableBody (filterHappyHours <$> newlyUpdatedRows <*> dynSearchFilter)
@@ -321,13 +322,15 @@ createHeadRow :: MonadWidget t m
   -> m (RowAction t)
 createHeadRow dA dS = el "tr" $ do
   let mkLinkAttrs hh = ("href" =: _link hh)
-      mkRowspan hh = ("rowspan" =: (T.pack $ show $ length $ _schedule hh)) <> ("style" =: "vertical-align:middle")
-  _c1 <- elDynAttr "td" (mkRowspan <$> dA) $ elDynAttr "a" (mkLinkAttrs <$> dA) (dynText (_restaurant <$> dA))
-  _c2 <- elDynAttr "td" (mkRowspan <$> dA) $ dynText $ _city <$> dA
+      mkRestRow hh = ("rowspan" =: (T.pack $ show $ length $ _schedule hh)) <> ("style" =: "vertical-align:middle")
+      mkActionRow hh = ("rowspan" =: (T.pack $ show $ length $ _schedule hh)) <> ("style" =: "vertical-align:middle") <> "class" =: "is-hidden-mobile"
+      mkCityRow hh = ("rowspan" =: (T.pack $ show $ length $ _schedule hh)) <> ("style" =: "vertical-align:middle") <> ("class" =: "is-hidden-mobile")
+  _c1 <- elDynAttr "td" (mkRestRow <$> dA) $ elDynAttr "a" (mkLinkAttrs <$> dA) (dynText (_restaurant <$> dA))
+  _c2 <- elDynAttr "td" (mkCityRow <$> dA) $ dynText $ _city <$> dA
   _c3 <- compactDayOfWeekBtns $ _days <$> dS
-  _c4 <- elAttr "td" ("style" =: "white-space:nowrap;vertical-align:middle") $ dynText $ time <$> dS
+  _c4 <- elAttr "td" ("style" =: "vertical-align:middle") $ dynText $ time <$> dS
   _c5 <- elAttr "td" ("style" =: "vertical-align:middle") $ dynText $ _scheduleDescription <$> dS
-  c6 <- elDynAttr "td" (mkRowspan <$> dA) $ do
+  c6 <- elDynAttr "td" (mkActionRow <$> dA) $ do
     eEdit <- icon "edit"
     eDelete <- icon "trash-alt"
     return (DeleteClicked <$> tagA dA eDelete, EditClicked <$> tagA dA eEdit)
@@ -340,14 +343,14 @@ createTailRow :: MonadWidget t m
   -> m (RowAction t)
 createTailRow dS = el "tr" $ do
   _c3 <- compactDayOfWeekBtns $ _days <$> dS
-  _c4 <- elAttr "td" ("style" =: "white-space:nowrap;vertical-align:middle") $ dynText $ time <$> dS
+  _c4 <- elAttr "td" ("style" =: "vertical-align:middle") $ dynText $ time <$> dS
   _c5 <- elAttr "td" ("style" =: "vertical-align:middle") $ dynText $ _scheduleDescription <$> dS
   return (never, never)
 
 compactDayOfWeekBtns :: MonadWidget t m 
   => Dynamic t [DayOfWeek]
   -> m ()
-compactDayOfWeekBtns initial = elAttr "td" ("style" =: "min-width:260px;vertical-align:middle") $ do
+compactDayOfWeekBtns initial = elAttr "td" ("style" =: "min-width:260px;vertical-align:middle" <> "class" =: "is-hidden-mobile") $ do
   days <- elClass "div" "buttons has-addons is-pulled-left" $ simpleList (enabledDays <$> initial) staticSingleDayButton 
   return ()
 
