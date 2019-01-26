@@ -16,10 +16,11 @@ module CreateModal(createModal, dayOfWeekBtns, timeSelect, enabledDays) where
 import qualified Data.Map.Lazy as M
 import qualified Data.Text as T
 
+import Control.Lens
 import Data.Coerce (coerce)
 import Data.Maybe (isJust)
 import Data.Time
-import Reflex.Dom
+import Reflex.Dom hiding (link)
 
 import Common.Dto
 import FrontendCommon
@@ -42,16 +43,24 @@ createModal initial = do
 createFields :: MonadWidget t m
   => HappyHour
   -> m (Dynamic t HappyHour)
-createFields initial = elClass "div" "box" $ do
-  dynRestaurant <- _textInput_value <$> horizontalInputWithInit (_restaurant initial) "Restaurant name:"
-  dynCity <- _textInput_value <$> horizontalInputWithInit (_city initial) "City name:"
-  dynLink <- _textInput_value <$> horizontalInputWithInit (_link initial) "Link to description:"
-  dynSchedules <- scheduleInput (_schedule initial)
+createFields initial = elClass "div" "box" $ elClass "div" "columns is-multiline" $ do
+  dynRestaurant <- elClass "div" "column is-half" $ bubbleInput (initial ^. restaurant) "Restaurant name"
+  dynCity <- elClass "div" "column is-half" $ bubbleInput (initial ^. city) "City name" -- _textInput_value <$> horizontalInputWithInit (_city initial) "City name:"
+  dynLink <- elClass "div" "column is-full" $ bubbleInput (initial ^. link) "Link to description" -- _textInput_value <$> horizontalInputWithInit (_link initial) "Link to description:"
+  dynSchedules <- elClass "div" "column is-full" $ scheduleInput (_schedule initial)
   return $ HappyHour <$> pure (_id initial) <*> dynCity <*> dynRestaurant <*> dynSchedules <*> dynLink
  
+bubbleInput :: MonadWidget t m => T.Text -> T.Text -> m (Dynamic t T.Text)
+bubbleInput initial placeholder = do
+  ti <- textInput $ def 
+    { _textInputConfig_attributes = constDyn ("class" =: "input is-rounded is-primary" <> "placeholder" =: placeholder)
+    , _textInputConfig_initialValue = initial
+    }
+  return $ _textInput_value ti
+
 scheduleInput :: MonadWidget t m => [Schedule] -> m (Dynamic t [Schedule])
 scheduleInput initial =
-  elClass "div" "tile is-ancestor is-10" $
+  elClass "div" "tile is-ancestor is-full" $
     elClass "div" "tile is-vertical is-parent" $ mdo
       let eAdd = AddAnother <$ domEvent Click btnAddAnother
           eScheduleChanged = leftmost $ getScheduleCardEvent dynMapCardResult : [eAdd]
@@ -62,7 +71,6 @@ scheduleInput initial =
       return dynSchedules
     where
   initialMap = M.fromList (zip [(0 :: Int) ..] initial)
-  -- initialMaybeMap = Just <$> initialMap
 
 listWithKey2 :: forall t k v m a. (Ord k, MonadWidget t m) => Dynamic t (M.Map k v) -> (k -> v -> m a) -> m (Dynamic t (M.Map k a))
 listWithKey2 vals mkChild = do
@@ -77,23 +85,23 @@ listWithKey2 vals mkChild = do
     mkChild k v0
 
 singleScheduleCard :: MonadWidget t m => Int -> Schedule -> m (Event t ScheduleCardEvent, Dynamic t Schedule)
-singleScheduleCard num initialSchedule = elClass "div" "tile is-child message" $ do
+singleScheduleCard num initialSchedule = elClass "div" "tile is-child message is-full" $ do
   clicked <- elClass "div" "message-header" $ do
     text $ "Schedule " <> (T.pack . show) (num + 1)
     (btn, _) <- elClass' "button" "delete" $ blank
     return $ domEvent Click btn
-  dynSchedule <- elClass "div" "message-body" $ elClass "div" "columns is-multiline" $ do
+  dynSchedule <- elClass "div" "message-body" $ elClass "div" "columns is-multiline is-centered" $ do
     dynDays <- elClass "div" "column is-full" $ elClass "div" "buttons has-addons is-centered" $ dayOfWeekBtns (_days initialSchedule)
-    timeRange <- elClass "div" "field has-addons" $ do
+    timeRange <- do
       let (initStartTime, initEndTime) = coerce (_time initialSchedule)
-      startTime <- elClass "div" "column is-narrow" $ timeSelect initStartTime
-      elClass "div" "column" $ text "to"
-      endTime <- elClass "div" "column is-narrow" $ timeSelect initEndTime
+      -- elClass "div" "column is-hidden-mobile" blank
+      startTime <- elClass "div" "column" $ timeSelect initStartTime "hourglass-start"
+      endTime <- elClass "div" "column has-text-centered" $ timeSelect initEndTime "hourglass-end"
+      -- elClass "div" "column is-hidden-mobile" blank
       return $ TimeRange <$> zipDyn startTime endTime
     description <- elClass "div" "column is-full" $ textInput (descriptionOptions initialSchedule)
     return $ Schedule <$> dynDays <*> timeRange <*> _textInput_value description
   return $ (DeleteOne num <$ clicked, dynSchedule)
-
 
 descriptionOptions :: Reflex t => Schedule -> TextInputConfig t
 descriptionOptions initialSchedule = def
@@ -168,10 +176,14 @@ singleDayBtnAttrs isSelected = if isSelected
 
 timeSelect :: MonadWidget t m 
   => TimeOfDay 
+  -> T.Text
   -> m (Dynamic t TimeOfDay)
-timeSelect initial =
-  elClass "div" "field has-addons" $ do
-    dynTimeOfDay <- timeOfDaySelect (normalizeTo12Hour initial)
+timeSelect initial icon = do
+  let isCentered = if icon == "clock" then "" else " has-addons-centered"
+  elClass "div" ("field has-addons has-icons-left" <> isCentered) $ do
+    -- elClass "div" "control" $ elClass "a" "button is-rounded is-primary is-outlined is-static" $ iconNoButton "hourglass-end"
+    -- iconNoButton "hourglass-end"
+    dynTimeOfDay <- timeOfDaySelect (normalizeTo12Hour initial) icon
     dynAmPm <- amPmSelect (amOrPm initial)
     return $ zipDynWith adjustTime dynAmPm dynTimeOfDay
 
@@ -187,12 +199,15 @@ amOrPm (TimeOfDay h _ _) = if h < 12 then AM else PM
 
 timeOfDaySelect :: MonadWidget t m 
   => TimeOfDay
+  -> T.Text
   -> m (Dynamic t TimeOfDay)
-timeOfDaySelect initial =
-  elClass "div" "control" $
+timeOfDaySelect initial icon =
+  elClass "div" "control has-icons-left" $ do
+    elClass "span" "icon has-text-primary" $ elClass "i" ("fas fa-" <> icon) blank
     elClass "span" "select is-rounded is-primary" $ do
       selected <- dropdown initial (constDyn timeOptions) def
       return (_dropdown_value selected)
+
 
 amPmSelect :: MonadWidget t m 
   => AmPm
@@ -210,7 +225,7 @@ timeOptions :: M.Map TimeOfDay T.Text
 timeOptions =
   let
     startUtc = UTCTime (ModifiedJulianDay 0) 0
-    transform =
+    showPair =
       -- pair TimeOfDay with its shown form
         (\timeOfDay -> (timeOfDay, printTimeOfDayNoMod timeOfDay))
       -- convert from UTCTime to TimeOfDay
@@ -220,7 +235,7 @@ timeOptions =
       -- convert to seconds
       . (\minutes -> minutes * 60)
   in
-    M.fromList $ transform <$> [0, 30 .. 30*23]
+    M.fromList $ showPair <$> [0, 30 .. 30*23]
 
 amPmMap :: M.Map AmPm T.Text
 amPmMap = M.fromList [(AM, "am"), (PM, "pm")]

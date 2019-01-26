@@ -189,7 +189,11 @@ createCommonRow :: MonadWidget t m
   -> m ()
 createCommonRow dS = void $ do
   _c3 <- compactDayOfWeekBtns $ _days <$> dS
-  _c4 <- elAttr "td" ("style" =: "vertical-align:middle") $ dynText $ (printTimeRange . _time) <$> dS
+  let timeText = dynText $ (printTimeRange . _time) <$> dS
+  -- what will show up on computer
+  _c4 <- elAttr "td" ("style" =: "vertical-align:middle;white-space:nowrap" <> "class" =: "is-hidden-mobile") timeText
+  -- what will show up on mobile
+  _c4' <- elAttr "td" ("style" =: "vertical-align:middle" <> "class" =: "is-hidden-tablet") timeText
   elAttr "td" ("style" =: "vertical-align:middle") $ dynText $ _scheduleDescription <$> dS
 
 compactDayOfWeekBtns :: MonadWidget t m 
@@ -239,8 +243,7 @@ row xs lastCol = el "tr" $ do
   el "td" lastCol
 
 -- "Removing" modal taken from reflex-dom-contribs
-removingModal
-  :: MonadWidget t m
+removingModal :: MonadWidget t m
   => Event t a
   -- ^ Event to open the model
   -> (a -> m (b, Event t ()))
@@ -267,3 +270,21 @@ removingModal showm modalBody = do
 --     <> "style" =: "border:0"
 --     <> "src" =: "https://www.google.com/maps/embed/v1/place?key=AIzaSyDxM3_sjDAP1kDHzbRMkZ6Ky7BYouXfVOs&q=place_id:ChIJMSuIlbnSJIgRbUFj__-VGdA&q=ChIJMUfEOWEtO4gRddDKWmgPMpI"
 --     ) blank
+
+switchMobile :: MonadWidget t m
+  => T.Text -- element type
+  -> Map T.Text T.Text -- attr map
+  -> m a -- mobile format
+  -> m a -- desktop format
+  -> m ()
+switchMobile elType attrs mobileWidget desktopWidget = void $ do 
+  _ <- elAttr elType (setMobileClass attrs) mobileWidget
+  elAttr elType (setDesktopClass attrs) desktopWidget
+
+-- needs to merge with previous class
+setMobileClass :: Map T.Text T.Text -> Map T.Text T.Text
+setMobileClass = mappend $ "class" =: "is-hidden-tablet"
+
+setDesktopClass :: Map T.Text T.Text -> Map T.Text T.Text
+setDesktopClass = mappend $ "class" =: "is-hidden-mobile"
+-- ix "class" %~ (\old -> old ++ " is-hidden-tablet")

@@ -34,7 +34,7 @@ filterSection = do
     restaurantVal <- elClass "div" "column is-narrow" $ filterBubbleInput "Restaurant"
     cityVal <- elClass "div" "column is-narrow" $ filterBubbleCity "Detroit" ["San Francisco", "Detroit"]
     dayVal <- elClass "div" "column is-narrow" $ filterBubbleDay Monday
-    timeVal <- elClass "div" "column is-narrow" $ timeSelect (TimeOfDay 17 0 0)
+    timeVal <- elClass "div" "column is-narrow" $ timeSelect (TimeOfDay 17 0 0) "clock"
     descriptionVal <- elClass "div" "column" $ filterBubbleInput "Description filter"
     eCreateClicked <- elClass "div" "column" $ createButton "Create New"
     let dSearchFilter = SearchFilter
@@ -77,7 +77,7 @@ createButton s = do
   (e, _) <- elClass' "button" "button is-primary is-pulled-right is-inverted" $ text s
   return $ domEvent Click e
 
------ Data and pure functions for filter area -----
+----- Data and pure functions for computing filter results -----
 
 data SearchFilter = SearchFilter 
   { _sCity :: T.Text
