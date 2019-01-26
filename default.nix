@@ -14,6 +14,12 @@ reflex-platform.project ({ pkgs, ... }: {
   };
 
   overrides = self: super: {
+    # jsaddle = (import (pkgs.fetchFromGitHub {
+    #             owner="obsidiansystems";
+    #             repo="jsaddle";
+    #             rev="b423436565fce7f69a65d843c71fc52dc455bf54";
+    #             sha256="09plndkh5wnbqi34x3jpaz0kjdjgyf074faf5xk97rsm81vhz8kk";
+    #           }) self).jsaddle;
     http-media = pkgs.haskell.lib.dontCheck super.http-media;
     servant = pkgs.haskell.lib.dontCheck super.servant;
     # doctest = self.callPackage ./nix/doctest.nix { };

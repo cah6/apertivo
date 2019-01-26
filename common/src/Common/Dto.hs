@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, RecordWildCards, DeriveAnyClass, DeriveGeneric, OverloadedStrings #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, RecordWildCards, DeriveAnyClass, DeriveGeneric, OverloadedStrings, TemplateHaskell #-}
 module Common.Dto where
 
 import qualified Data.Attoparsec.Text as AP
@@ -70,7 +70,7 @@ defaultHH = HappyHour
   { _id = Nothing
   , _city = ""
   , _restaurant = ""
-  , _schedule = [defaultSchedule]
+  , _schedule = []
   , _link = ""
   }
 

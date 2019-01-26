@@ -16,9 +16,8 @@ module Main where
 import Prelude hiding (id)
 
 import qualified Data.Text as T
-import Control.Lens.Operators
+import Control.Lens
 import Control.Monad (void)
-import Control.Monad.Trans (liftIO)
 import Data.Bifunctor (first)
 import Data.Coerce (coerce)
 import Data.FileEmbed
@@ -26,6 +25,7 @@ import Data.List (intersect, sortBy)
 import Data.Maybe (listToMaybe, mapMaybe)
 import Data.Map (fromList, toList, Map)
 import Data.Monoid ((<>))
+import Data.Ord (comparing)
 import Data.Text.Encoding (decodeUtf8)
 import Data.Time.LocalTime (TimeOfDay(..))
 import Data.UUID (toText, UUID)
@@ -34,23 +34,25 @@ import Reflex.Dom.Core
 
 import Common.Dto
 import CreateModal
+import FilterArea
 import FrontendCommon
 import ServantReflexClient
 
 main :: IO ()
 main = run 3003 $ mainWidgetWithHead frontendHead (prerender (text "Loading...") body)
-
+-- import Autocomplete
 -- main :: IO ()
 -- main = run 3003 $ mainWidgetWithHead frontendHead (prerender (text "Loading...") autocompleteBoxMain)
 
 frontendHead :: forall t m. MonadWidget t m => m ()
 frontendHead = do
+  -- liftJSM attachToWindow
   el "title" $ text "Apertivo"
   elAttr "meta" ("name" =: "viewport" <> "content" =: "initial-scale=1.0, width=device-width") blank
-  el "style" $ text $ decodeUtf8 $(embedFile "../css/mystyles.css")
+  -- todo: don't hardcode this!
+  el "style" $ text $ decodeUtf8 $(embedFile "/Users/christian.henry/coding/haskell/apertivo/css/mystyles.css")
   -- elAttr "script" ("src" =: "https://maps.googleapis.com/maps/api/js?key=AIzaSyBZiVkgP8la1GHQw_ZJXNQl0N8dGCOW62c&libraries=places"
-  --             <> "type" =: "text/javascript"
-  --             ) blank
+  --     <> "async" =: "true" <> "defer" =: "true") blank
   return ()
 
 body :: forall t m. MonadWidget t m => m ()
@@ -58,7 +60,7 @@ body = do
   _ <- makeHero
   started <- getPostBuild
   eQueryResults <- queryHH started
-  _ <- searchTab (sortBy sortByRestaurant <$> eQueryResults)
+  _ <- searchTab (sortBy (comparing _restaurant) <$> eQueryResults)
   return ()
 
 makeHero :: MonadWidget t m => m ()
@@ -75,8 +77,7 @@ searchTab eInitQueryResults = elClass "div" "box" $ mdo
   let eCreateSubmitted = switchDyn $ flattenMaybe <$> dynMaybeHH
       eQueryResults = QueryResults <$> eInitQueryResults
   eNewUUID <- createHH eCreateSubmitted
-  -- let eCreatedWithUUID = (flattenMaybe . sequence) $ attachPromptlyDynWith zipServerResponse dynMaybeHH eNewUUID
-  eCreatedWithUUID <- traceEvent "latest created" <$> alignLatest zipServerResponse (defaultHH {_schedule = []}) eCreateSubmitted eNewUUID
+  eCreatedWithUUID <- alignLatest (flip $ set id . Just) defaultHH eCreateSubmitted eNewUUID
   elClass "div" "box" $ elClass "div" "table-container" $ elClass "table" "table is-fullwidth" $ mdo
     el "thead" $
       el "tr" $ do 
@@ -90,14 +91,12 @@ searchTab eInitQueryResults = elClass "div" "box" $ mdo
         -- mapM_ (elAttr "th" ("scope" =: "col" ) . text) cols
     eEditOrDelete <- mkTableBody (filterHappyHours <$> newlyUpdatedRows <*> dynSearchFilter)
     let eTableAction = leftmost [eQueryResults, SingleCreated <$> eCreatedWithUUID, eEditOrDelete]
-    newlyUpdatedRows <- foldDyn reduceTableUpdate ([defaultHH {_schedule = []}]) eTableAction
+    newlyUpdatedRows <- foldDyn reduceTableUpdate [defaultHH] eTableAction
     return ()
   return ()
 
--- "Zips" in time: [the event for create response from modal, the response from server with UUID]
-zipServerResponse :: HappyHour -> UUID -> HappyHour
-zipServerResponse hh newUUID = hh { _id = Just newUUID }
-
+-- "Zips" two events in time. 
+-- I.e. returns an event that fires when both events have come in. 
 alignLatest :: MonadWidget t m
   => (a -> b -> c) 
   -> a 
@@ -108,12 +107,18 @@ alignLatest f defA eA eB = do
   dynLeft <- holdDyn defA eA
   return $ attachPromptlyDynWith f dynLeft eB
 
+data TableUpdate = 
+    QueryResults [HappyHour]
+  | SingleDeleted UUID
+  | SingleEdited HappyHour
+  | SingleCreated HappyHour
+
 reduceTableUpdate :: TableUpdate -> [HappyHour] -> [HappyHour]
 reduceTableUpdate update xs = case update of 
   QueryResults newXs -> 
     newXs
   SingleCreated x -> 
-    sortBy sortByRestaurant (x : xs)
+    sortBy (comparing _restaurant) (x : xs)
   SingleEdited newVal ->
     let (beforeEdit, withAndAfterEdit) = break (\hh -> _id hh == newVal ^. id) xs
     in  beforeEdit ++ (newVal : tail withAndAfterEdit)
@@ -129,70 +134,6 @@ reduceTableUpdate update xs = case update of
 --     <> "style" =: "border:0"
 --     <> "src" =: "https://www.google.com/maps/embed/v1/place?key=AIzaSyDxM3_sjDAP1kDHzbRMkZ6Ky7BYouXfVOs&q=place_id:ChIJMSuIlbnSJIgRbUFj__-VGdA&q=ChIJMUfEOWEtO4gRddDKWmgPMpI"
 --     ) blank
-
-data TableUpdate = 
-    QueryResults [HappyHour]
-  | SingleDeleted UUID
-  | SingleEdited HappyHour
-  | SingleCreated HappyHour
-
-filterSection ::  MonadWidget t m => m (Dynamic t SearchFilter, Event t ())
-filterSection = do 
-  elClass "div" "columns" $ do 
-    restaurantVal <- elClass "div" "column is-narrow" $ filterBubbleInput "Restaurant"
-    cityVal <- elClass "div" "column is-narrow" $ filterBubbleCity "Detroit" ["San Francisco", "Detroit"]
-    days <- elClass "div" "column is-narrow" $ filterBubbleDay Monday
-    time <- elClass "div" "column is-narrow" $ timeSelect (TimeOfDay 17 0 0)
-    descriptionVal <- elClass "div" "column" $ filterBubbleInput "Description filter"
-    eCreateClicked <- elClass "div" "column" $ createButton "Create New"
-    return $ (SearchFilter <$> cityVal <*> restaurantVal <*> descriptionVal <*> fmap (\d -> [d]) days <*> (Just <$> time), eCreateClicked)
-
-createButton :: MonadWidget t m => T.Text -> m (Event t ())
-createButton s = do
-  (e, _) <- elClass' "button" "button is-primary is-pulled-right is-inverted" $ text s
-  return $ domEvent Click e
-
-filterBubbleInput :: MonadWidget t m => T.Text -> m (Dynamic t T.Text)
-filterBubbleInput initial = do
-  ti <- textInput $ def 
-    { _textInputConfig_attributes = constDyn ("class" =: "input is-rounded is-primary" <> "placeholder" =: initial)
-    }
-  return $ _textInput_value ti
-
-filterBubbleCity :: (MonadWidget t m) 
-  => T.Text
-  -> [T.Text]
-  -> m (Dynamic t T.Text)
-filterBubbleCity initial options = elClass "div" "select is-primary is-rounded" $ do
-  dd <- dropdown initial (constDyn $ fromList (zip options options)) def
-  return (_dropdown_value dd)
-
-filterBubbleDay :: (MonadWidget t m) 
-  => DayOfWeek
-  -> m (Dynamic t DayOfWeek)
-filterBubbleDay initial = elClass "div" "field has-addons" $ do 
-  elClass "div" "control" $ elClass "a" "button is-rounded is-primary is-outlined" $ iconNoButton "check"
-  elClass "div" "control" $ elClass "div" "select is-rounded is-primary" $ do
-    dd <- dropdown initial (constDyn $ toShowMap [Sunday .. Saturday]) def
-    return (_dropdown_value dd)
-
-toShowMap :: (Ord a, Show a) => [a] -> Map a T.Text
-toShowMap xs = fromList $ zip xs (T.pack . show <$> xs)
-
-data SearchFilter = SearchFilter 
-  { _sCity :: T.Text
-  , _sRestaurant :: T.Text
-  , _sScheduleDescription :: T.Text
-  , _sDay :: [DayOfWeek]
-  , _sTime :: Maybe TimeOfDay
-  }
-
-flattenMaybe :: Reflex t => Maybe (Event t a) -> Event t a
-flattenMaybe Nothing  = never
-flattenMaybe (Just a) = a
-
-sortByRestaurant :: HappyHour -> HappyHour -> Ordering
-sortByRestaurant a1 a2 = compare (_restaurant a1) (_restaurant a2)
 
 filterHappyHours :: [HappyHour] -> SearchFilter -> [HappyHour]
 filterHappyHours xs searchFilter =
@@ -250,10 +191,6 @@ schedulesThatContain scheduleFilter a =
   in  if (length matchingSchedules == length (_schedule a)) 
         then Just a 
         else Just $ a { _schedule = matchingSchedules } 
-
-boolToMaybe :: Bool -> a -> Maybe a
-boolToMaybe True a = Just a
-boolToMaybe False _ = Nothing
 
 listToMaybeDef :: [a] -> b -> Maybe b
 listToMaybeDef xs b = boolToMaybe (null xs) b
@@ -325,9 +262,7 @@ createHeadRow dA dS = el "tr" $ do
       mkCityRow hh = ("rowspan" =: (T.pack $ show $ length $ _schedule hh)) <> ("style" =: "vertical-align:middle") <> ("class" =: "is-hidden-mobile")
   _c1 <- elDynAttr "td" (mkRestRow <$> dA) $ elDynAttr "a" (mkLinkAttrs <$> dA) (dynText (_restaurant <$> dA))
   _c2 <- elDynAttr "td" (mkCityRow <$> dA) $ dynText $ _city <$> dA
-  _c3 <- compactDayOfWeekBtns $ _days <$> dS
-  _c4 <- elAttr "td" ("style" =: "vertical-align:middle") $ dynText $ printTime <$> dS
-  _c5 <- elAttr "td" ("style" =: "vertical-align:middle") $ dynText $ _scheduleDescription <$> dS
+  _common <- createCommonRow dS
   c6 <- elDynAttr "td" (mkActionRow <$> dA) $ do
     eEdit <- icon "edit"
     eDelete <- icon "trash-alt"
@@ -340,10 +275,16 @@ createTailRow :: MonadWidget t m
   => Dynamic t Schedule
   -> m (RowAction t)
 createTailRow dS = el "tr" $ do
-  _c3 <- compactDayOfWeekBtns $ _days <$> dS
-  _c4 <- elAttr "td" ("style" =: "vertical-align:middle") $ dynText $ printTime <$> dS
-  _c5 <- elAttr "td" ("style" =: "vertical-align:middle") $ dynText $ _scheduleDescription <$> dS
+  _common <- createCommonRow dS
   return (never, never)
+
+createCommonRow :: MonadWidget t m
+  => Dynamic t Schedule
+  -> m ()
+createCommonRow dS = void $ do
+  _c3 <- compactDayOfWeekBtns $ _days <$> dS
+  _c4 <- elAttr "td" ("style" =: "vertical-align:middle") $ dynText $ (printTimeRange . _time) <$> dS
+  elAttr "td" ("style" =: "vertical-align:middle") $ dynText $ _scheduleDescription <$> dS
 
 compactDayOfWeekBtns :: MonadWidget t m 
   => Dynamic t [DayOfWeek]
@@ -375,6 +316,7 @@ printDayShort day = case day of
   Saturday -> "S"
   Sunday -> "S"
 
+-- Given a dynamic list of event tuples, 
 flattenDynList :: Reflex t => Dynamic t [(Event t a, Event t b)] -> (Event t a, Event t b)
 flattenDynList dxs = 
   let dLeft = leftmost <$> (fmap . fmap) fst dxs
@@ -383,20 +325,6 @@ flattenDynList dxs =
 
 tagA :: Reflex t => Dynamic t HappyHour -> Event t () -> Event t UUID
 tagA dA e = fmapMaybe _id $ tag (current dA) e
-
-uuidText :: HappyHour -> T.Text
-uuidText a = case _id a of
-  Nothing -> "Nothing"
-  Just x -> toText x
-
-days :: Schedule -> T.Text
-days Schedule{ _days, _time } = printDays _days
-
-printTime :: Schedule -> T.Text
-printTime Schedule{ _days, _time } = printTimeRange _time
-
-flattenHH :: HappyHour -> [HappyHour]
-flattenHH HappyHour{_schedule, ..} = map (\s -> HappyHour {_schedule = [s], .. } ) _schedule
 
 row :: MonadWidget t m
   => [m ()]
@@ -426,16 +354,3 @@ removingModal showm modalBody = do
     removeFromDOMWrapper (Just a) =
       elClass "div" "modal is-active" $
         first Just <$> modalBody a
-
--- Utils
-
-putDebugLnE :: MonadWidget t m => Event t a -> (a -> String) -> m ()
-putDebugLnE e mkStr = performEvent_ (liftIO . putStrLn . mkStr <$> e)
-
-icon :: MonadWidget t m => T.Text -> m (Event t ())
-icon name = do
-  (e, _) <- elClass "a" "button is-white is-small" $ elClass' "span" "icon" $ elClass "i" ("fas fa-" <> name) blank
-  return $ domEvent Click e
-
-iconNoButton :: MonadWidget t m => T.Text -> m ()
-iconNoButton name = elClass "span" "icon" $ elClass "i" ("fas fa-" <> name) blank

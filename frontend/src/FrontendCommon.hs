@@ -36,3 +36,21 @@ horizontalInputWithInit initial label = elAttr "div" ("class" =: "field") $ do
     , _textInputConfig_initialValue = initial
     }
   
+flattenMaybe :: Reflex t => Maybe (Event t a) -> Event t a
+flattenMaybe Nothing  = never
+flattenMaybe (Just a) = a
+
+boolToMaybe :: Bool -> a -> Maybe a
+boolToMaybe True a = Just a
+boolToMaybe False _ = Nothing
+
+-- putDebugLnE :: MonadWidget t m => Event t a -> (a -> String) -> m ()
+-- putDebugLnE e mkStr = performEvent_ (liftIO . putStrLn . mkStr <$> e)
+
+icon :: MonadWidget t m => T.Text -> m (Event t ())
+icon name = do
+  (e, _) <- elClass "a" "button is-white is-small" $ elClass' "span" "icon" $ elClass "i" ("fas fa-" <> name) blank
+  return $ domEvent Click e
+
+iconNoButton :: MonadWidget t m => T.Text -> m ()
+iconNoButton name = elClass "span" "icon" $ elClass "i" ("fas fa-" <> name) blank
