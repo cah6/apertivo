@@ -43,11 +43,11 @@ createFields :: MonadWidget t m
   => HappyHour
   -> m (Dynamic t HappyHour)
 createFields initial = elClass "div" "box" $ do
-  restaurant <- _textInput_value <$> horizontalInputWithInit (_restaurant initial) "Restaurant name:"
-  city <- _textInput_value <$> horizontalInputWithInit (_city initial) "City name:"
-  linkVal <- _textInput_value <$> horizontalInputWithInit (_link initial) "Link to description:"
+  dynRestaurant <- _textInput_value <$> horizontalInputWithInit (_restaurant initial) "Restaurant name:"
+  dynCity <- _textInput_value <$> horizontalInputWithInit (_city initial) "City name:"
+  dynLink <- _textInput_value <$> horizontalInputWithInit (_link initial) "Link to description:"
   dynSchedules <- scheduleInput (_schedule initial)
-  return $ HappyHour <$> pure (_id initial) <*> city <*> restaurant <*> dynSchedules <*> linkVal
+  return $ HappyHour <$> pure (_id initial) <*> dynCity <*> dynRestaurant <*> dynSchedules <*> dynLink
  
 scheduleInput :: MonadWidget t m => [Schedule] -> m (Dynamic t [Schedule])
 scheduleInput initial =
@@ -82,18 +82,18 @@ singleScheduleCard num initialSchedule = elClass "div" "tile is-child message" $
     text $ "Schedule " <> (T.pack . show) (num + 1)
     (btn, _) <- elClass' "button" "delete" $ blank
     return $ domEvent Click btn
-  schedule <- elClass "div" "message-body" $ elClass "div" "columns is-multiline" $ do
-    days <- elClass "div" "column is-full" $ elClass "div" "buttons has-addons is-centered" $ dayOfWeekBtns (_days initialSchedule)
+  dynSchedule <- elClass "div" "message-body" $ elClass "div" "columns is-multiline" $ do
+    dynDays <- elClass "div" "column is-full" $ elClass "div" "buttons has-addons is-centered" $ dayOfWeekBtns (_days initialSchedule)
     timeRange <- elClass "div" "field has-addons" $ do
+      let (initStartTime, initEndTime) = coerce (_time initialSchedule)
       startTime <- elClass "div" "column is-narrow" $ timeSelect initStartTime
       elClass "div" "column" $ text "to"
       endTime <- elClass "div" "column is-narrow" $ timeSelect initEndTime
       return $ TimeRange <$> zipDyn startTime endTime
     description <- elClass "div" "column is-full" $ textInput (descriptionOptions initialSchedule)
-    return $ Schedule <$> days <*> timeRange <*> _textInput_value description
-  return $ (DeleteOne num <$ clicked, schedule)
-    where
-  (initStartTime, initEndTime) = coerce (_time initialSchedule)
+    return $ Schedule <$> dynDays <*> timeRange <*> _textInput_value description
+  return $ (DeleteOne num <$ clicked, dynSchedule)
+
 
 descriptionOptions :: Reflex t => Schedule -> TextInputConfig t
 descriptionOptions initialSchedule = def
@@ -136,8 +136,8 @@ dayOfWeekBtns :: MonadWidget t m
   => [DayOfWeek]
   -> m (Dynamic t [DayOfWeek])
 dayOfWeekBtns initial = do
-  days <- mapM singleDayBtn (enabledDays initial)
-  return (mapBtnState <$> sequence days)
+  dynDays <- mapM singleDayBtn (enabledDays initial)
+  return (mapBtnState <$> sequence dynDays)
 
 -- Get list of all days where inputs are True and rest are False
 enabledDays :: [DayOfWeek] -> [(DayOfWeek, Bool)]

@@ -21,14 +21,13 @@ import Control.Monad (void)
 import Data.Bifunctor (first)
 import Data.Coerce (coerce)
 import Data.FileEmbed
-import Data.List (intersect, sortBy)
-import Data.Maybe (listToMaybe, mapMaybe)
+import Data.List (sortBy)
+import Data.Maybe (listToMaybe)
 import Data.Map (fromList, toList, Map)
 import Data.Monoid ((<>))
 import Data.Ord (comparing)
 import Data.Text.Encoding (decodeUtf8)
-import Data.Time.LocalTime (TimeOfDay(..))
-import Data.UUID (toText, UUID)
+import Data.UUID (UUID)
 import Language.Javascript.JSaddle.Warp
 import Reflex.Dom.Core
 
@@ -107,94 +106,6 @@ alignLatest f defA eA eB = do
   dynLeft <- holdDyn defA eA
   return $ attachPromptlyDynWith f dynLeft eB
 
-data TableUpdate = 
-    QueryResults [HappyHour]
-  | SingleDeleted UUID
-  | SingleEdited HappyHour
-  | SingleCreated HappyHour
-
-reduceTableUpdate :: TableUpdate -> [HappyHour] -> [HappyHour]
-reduceTableUpdate update xs = case update of 
-  QueryResults newXs -> 
-    newXs
-  SingleCreated x -> 
-    sortBy (comparing _restaurant) (x : xs)
-  SingleEdited newVal ->
-    let (beforeEdit, withAndAfterEdit) = break (\hh -> _id hh == newVal ^. id) xs
-    in  beforeEdit ++ (newVal : tail withAndAfterEdit)
-  SingleDeleted deletedUUID -> 
-    let (beforeDelete, withAndAfterDelete) = break (\hh -> _id hh == Just deletedUUID) xs
-    in  beforeDelete ++ (tail withAndAfterDelete)
-
--- mkGoogleMapsFrame :: MonadWidget t m => m ()
--- mkGoogleMapsFrame = elAttr "iframe" (
---         "width" =: "600"
---     <> "height" =: "450"
---     <> "frameborder" =: "0"
---     <> "style" =: "border:0"
---     <> "src" =: "https://www.google.com/maps/embed/v1/place?key=AIzaSyDxM3_sjDAP1kDHzbRMkZ6Ky7BYouXfVOs&q=place_id:ChIJMSuIlbnSJIgRbUFj__-VGdA&q=ChIJMUfEOWEtO4gRddDKWmgPMpI"
---     ) blank
-
-filterHappyHours :: [HappyHour] -> SearchFilter -> [HappyHour]
-filterHappyHours xs searchFilter =
-  let
-    filterSingle :: HappyHour -> Maybe HappyHour
-    filterSingle x = 
-          cityMatches x (_sCity searchFilter)
-      >>= restaurantMatches (_sRestaurant searchFilter)
-      >>= dayMatches (_sDay searchFilter)
-      >>= timeMatches (_sTime searchFilter)      
-      >>= schedulesThatContain (_sScheduleDescription searchFilter)
-  in
-    mapMaybe filterSingle xs
-
-cityMatches :: HappyHour -> T.Text -> Maybe HappyHour
-cityMatches a cityFilter = boolToMaybe (T.isInfixOf cityFilter (_city a)) a
-
-restaurantMatches :: T.Text -> HappyHour -> Maybe HappyHour
-restaurantMatches restaurantFilter a = 
-  let filterR = T.toLower restaurantFilter
-      targetR = T.toLower (_restaurant a)
-  in  boolToMaybe (T.isInfixOf filterR targetR) a
-
-dayMatches :: [DayOfWeek] -> HappyHour -> Maybe HappyHour
-dayMatches daysFilter a = 
-  let dayMatch :: [DayOfWeek] -> Bool
-      dayMatch days = null daysFilter || (not . null . intersect daysFilter) days
-      matchingSchedules :: [Schedule]
-      matchingSchedules = filter (dayMatch . _days) (_schedule a)
-  in  if (length matchingSchedules == length (_schedule a)) 
-        then Just a 
-        else Just $ a { _schedule = matchingSchedules }
-
-timeMatches :: Maybe TimeOfDay -> HappyHour -> Maybe HappyHour
-timeMatches Nothing a = Just a 
-timeMatches (Just timeFilter) a = 
-  let matchingSchedules :: [Schedule]
-      matchingSchedules = filter (isTimeBetween timeFilter . _time) (_schedule a)
-  in  if (length matchingSchedules == length (_schedule a)) 
-        then Just a 
-        else Just $ a { _schedule = matchingSchedules }
-
-isTimeBetween :: TimeOfDay -> TimeRange -> Bool
-isTimeBetween time (TimeRange (start, end)) = time >= start && time <= end
-
-anyScheduleContains :: HappyHour -> T.Text -> Bool
-anyScheduleContains x scheduleFilter = any (T.isInfixOf scheduleFilter . _scheduleDescription) (_schedule x)
-
-schedulesThatContain :: T.Text -> HappyHour -> Maybe HappyHour
-schedulesThatContain scheduleFilter a =
-  let scheduleMatch :: Schedule -> Bool
-      scheduleMatch = T.isInfixOf (T.toLower scheduleFilter) . T.toLower . _scheduleDescription
-      matchingSchedules :: [Schedule]
-      matchingSchedules = filter scheduleMatch (_schedule a)
-  in  if (length matchingSchedules == length (_schedule a)) 
-        then Just a 
-        else Just $ a { _schedule = matchingSchedules } 
-
-listToMaybeDef :: [a] -> b -> Maybe b
-listToMaybeDef xs b = boolToMaybe (null xs) b
-
 mkTableBody :: MonadWidget t m => Dynamic t [HappyHour] -> m (Event t TableUpdate)
 mkTableBody xs = do 
   let rows = simpleList xs makeTableSection
@@ -213,13 +124,8 @@ openModalEvent :: (Reflex t)
   -> Event t HappyHour
 openModalEvent dA eEdit = 
   let extract :: [HappyHour] -> UUID -> Maybe HappyHour
-      extract as uuid = listToMaybe $ filter (isId uuid) as
+      extract as uuid = listToMaybe $ filter ((==) (Just uuid) . view id) as
   in  attachPromptlyDynWithMaybe extract dA (coerce <$> eEdit)
-
-isId :: UUID -> HappyHour -> Bool
-isId uuid a = case (_id a) of 
-  Nothing -> False
-  Just b -> uuid == b
 
 cols :: [T.Text]
 cols = ["Restaurant", "City", "Days", "Time", "Description", "Action"]
@@ -289,16 +195,14 @@ createCommonRow dS = void $ do
 compactDayOfWeekBtns :: MonadWidget t m 
   => Dynamic t [DayOfWeek]
   -> m ()
-compactDayOfWeekBtns initial = elAttr "td" ("style" =: "min-width:260px;vertical-align:middle" <> "class" =: "is-hidden-mobile") $ do
-  days <- elClass "div" "buttons has-addons is-pulled-left" $ simpleList (enabledDays <$> initial) staticSingleDayButton 
-  return ()
+compactDayOfWeekBtns initial = elAttr "td" ("style" =: "min-width:260px;vertical-align:middle" <> "class" =: "is-hidden-mobile") $ void $
+  elClass "div" "buttons has-addons is-pulled-left" $ simpleList (enabledDays <$> initial) staticSingleDayButton 
 
 staticSingleDayButton :: (MonadWidget t m)
   => Dynamic t (DayOfWeek, Bool)
   -> m ()
-staticSingleDayButton dynTuple = do
-  (btn, _) <- elDynAttr' "span" (staticBtnAttr . snd <$> dynTuple) $ dynText (printDayShort . fst <$> dynTuple)
-  return ()
+staticSingleDayButton dynTuple = void $
+  elDynAttr' "span" (staticBtnAttr . snd <$> dynTuple) $ dynText (printDayShort . fst <$> dynTuple)
 
 staticBtnAttr :: Bool -> Map T.Text T.Text
 staticBtnAttr True =
@@ -354,3 +258,12 @@ removingModal showm modalBody = do
     removeFromDOMWrapper (Just a) =
       elClass "div" "modal is-active" $
         first Just <$> modalBody a
+
+-- mkGoogleMapsFrame :: MonadWidget t m => m ()
+-- mkGoogleMapsFrame = elAttr "iframe" (
+--         "width" =: "600"
+--     <> "height" =: "450"
+--     <> "frameborder" =: "0"
+--     <> "style" =: "border:0"
+--     <> "src" =: "https://www.google.com/maps/embed/v1/place?key=AIzaSyDxM3_sjDAP1kDHzbRMkZ6Ky7BYouXfVOs&q=place_id:ChIJMSuIlbnSJIgRbUFj__-VGdA&q=ChIJMUfEOWEtO4gRddDKWmgPMpI"
+--     ) blank
