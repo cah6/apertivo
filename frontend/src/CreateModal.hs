@@ -43,7 +43,7 @@ createModal initial = do
 createFields :: MonadWidget t m
   => HappyHour
   -> m (Dynamic t HappyHour)
-createFields initial = elClass "div" "box" $ elClass "div" "columns is-multiline" $ do
+createFields initial = elClass "div" "columns is-multiline" $ do
   dynRestaurant <- elClass "div" "column is-half" $ bubbleInput (initial ^. restaurant) "Restaurant name"
   dynCity <- elClass "div" "column is-half" $ bubbleInput (initial ^. city) "City name" -- _textInput_value <$> horizontalInputWithInit (_city initial) "City name:"
   dynLink <- elClass "div" "column is-full" $ bubbleInput (initial ^. link) "Link to description" -- _textInput_value <$> horizontalInputWithInit (_link initial) "Link to description:"
@@ -178,12 +178,12 @@ timeSelect :: MonadWidget t m
   => TimeOfDay 
   -> T.Text
   -> m (Dynamic t TimeOfDay)
-timeSelect initial icon = do
-  let isCentered = if icon == "clock" then "" else " has-addons-centered"
+timeSelect initial iconName = do
+  let isCentered = if iconName == "clock" then "" else " has-addons-centered"
   elClass "div" ("field has-addons has-icons-left" <> isCentered) $ do
     -- elClass "div" "control" $ elClass "a" "button is-rounded is-primary is-outlined is-static" $ iconNoButton "hourglass-end"
     -- iconNoButton "hourglass-end"
-    dynTimeOfDay <- timeOfDaySelect (normalizeTo12Hour initial) icon
+    dynTimeOfDay <- timeOfDaySelect (normalizeTo12Hour initial) iconName
     dynAmPm <- amPmSelect (amOrPm initial)
     return $ zipDynWith adjustTime dynAmPm dynTimeOfDay
 
@@ -201,9 +201,9 @@ timeOfDaySelect :: MonadWidget t m
   => TimeOfDay
   -> T.Text
   -> m (Dynamic t TimeOfDay)
-timeOfDaySelect initial icon =
+timeOfDaySelect initial iconName =
   elClass "div" "control has-icons-left" $ do
-    elClass "span" "icon has-text-primary" $ elClass "i" ("fas fa-" <> icon) blank
+    elClass "span" "icon has-text-primary" $ elClass "i" ("fas fa-" <> iconName) blank
     elClass "span" "select is-rounded is-primary" $ do
       selected <- dropdown initial (constDyn timeOptions) def
       return (_dropdown_value selected)

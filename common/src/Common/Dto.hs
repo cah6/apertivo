@@ -11,8 +11,10 @@ import Data.Monoid ((<>))
 import Data.Text (Text, pack, breakOn, intercalate, unpack)
 import Data.Time (formatTime)
 import Data.Time.Calendar (Day(..))
+import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
+import Data.Time.Clock (getCurrentTime)
 import Data.Time.Format (defaultTimeLocale)
-import Data.Time.LocalTime (TimeOfDay(..))
+import Data.Time.LocalTime (getCurrentTimeZone, utcToLocalTime, LocalTime(..), TimeOfDay(..))
 import Data.UUID (UUID)
 import System.Directory (listDirectory)
 
@@ -128,6 +130,41 @@ printDay day = case day of
   Friday -> "Fri"
   Saturday -> "Sat"
   Sunday -> "Sun"
+
+getCurrentTimeAndDay :: IO (DayOfWeek, TimeOfDay)
+getCurrentTimeAndDay = do
+  currentTime <- getCurrentTime
+  timezone <- getCurrentTimeZone
+  let (LocalTime julianDay timeOfDay) = utcToLocalTime timezone currentTime
+      (_weekNum, dayNum) = sundayStartWeek julianDay
+  return (resolveDayNum dayNum, timeOfDay)
+
+roundTimeUp :: TimeOfDay -> TimeOfDay
+roundTimeUp (TimeOfDay h m s)
+  | m < 30 = TimeOfDay h 30 0
+  | h == 23 = TimeOfDay 0 0 0
+  | otherwise = TimeOfDay (h + 1) 0 0
+
+-- time 1.9.2 has more useful data types so we won't need to do this
+resolveDayNum :: Int -> DayOfWeek
+resolveDayNum int = case int of 
+  0 -> Sunday
+  1 -> Monday
+  2 -> Tuesday
+  3 -> Wednesday
+  4 -> Thursday
+  5 -> Friday
+  6 -> Saturday
+
+printDayShort :: DayOfWeek -> Text 
+printDayShort day = case day of
+  Monday -> "M"
+  Tuesday -> "T"
+  Wednesday -> "W"
+  Thursday -> "T"
+  Friday -> "F"
+  Saturday -> "S"
+  Sunday -> "S"
 
 instance FromJSON Schedule where
   parseJSON = withObject "schedule" $ \o -> do

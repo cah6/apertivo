@@ -49,6 +49,7 @@ library
                , jsaddle-warp
                , lens
                , mtl
+               , one-liner
                , servant
                , servant-reflex
                , reflex-dom

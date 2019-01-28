@@ -10,6 +10,10 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Main where
 
@@ -18,6 +22,7 @@ import Prelude hiding (id)
 import qualified Data.Text as T
 import Control.Lens
 import Control.Monad (void)
+import Control.Monad.IO.Class (liftIO)
 import Data.Bifunctor (first)
 import Data.Coerce (coerce)
 import Data.FileEmbed
@@ -28,6 +33,7 @@ import Data.Monoid ((<>))
 import Data.Ord (comparing)
 import Data.Text.Encoding (decodeUtf8)
 import Data.UUID (UUID)
+import Generics.OneLiner
 import Language.Javascript.JSaddle.Warp
 import Reflex.Dom.Core
 
@@ -71,7 +77,8 @@ makeHero =
 
 searchTab :: MonadWidget t m => Event t [HappyHour] -> m ()
 searchTab eInitQueryResults = elClass "div" "box" $ mdo
-  (dynSearchFilter, eCreateClicked) <- filterSection
+  (dow, tod) <- liftIO getCurrentTimeAndDay
+  (dynSearchFilter, eCreateClicked) <- filterSection dow (roundTimeUp tod)
   dynMaybeHH <- removingModal ((\_ -> defaultHH) <$> eCreateClicked) createModal
   let eCreateSubmitted = switchDyn $ flattenMaybe <$> dynMaybeHH
       eQueryResults = QueryResults <$> eInitQueryResults
@@ -118,7 +125,7 @@ mkTableBody xs = do
   _ <- updateHH eEditForServant
   return $ leftmost [eDeleteHappened, eEditHappened]
 
-openModalEvent :: (Reflex t) 
+openModalEvent :: (Reflex t)
   => Dynamic t [HappyHour] 
   -> Event t EditClicked
   -> Event t HappyHour
@@ -163,9 +170,14 @@ createHeadRow :: MonadWidget t m
   -> m (RowAction t)
 createHeadRow dA dS = el "tr" $ do
   let mkLinkAttrs hh = ("href" =: _link hh)
-      mkRestRow hh = ("rowspan" =: (T.pack $ show $ length $ _schedule hh)) <> ("style" =: "vertical-align:middle")
-      mkActionRow hh = ("rowspan" =: (T.pack $ show $ length $ _schedule hh)) <> ("style" =: "vertical-align:middle") <> "class" =: "is-hidden-mobile"
-      mkCityRow hh = ("rowspan" =: (T.pack $ show $ length $ _schedule hh)) <> ("style" =: "vertical-align:middle") <> ("class" =: "is-hidden-mobile")
+      mkRestRow hh = "rowspan" =: (T.pack $ show $ length $ _schedule hh) 
+        <> "style" =: "vertical-align:middle"
+      mkActionRow hh = "rowspan" =: (T.pack $ show $ length $ _schedule hh)
+        <> "style" =: "vertical-align:middle;white-space:nowrap"
+        <> "class" =: "is-hidden-mobile"
+      mkCityRow hh = "rowspan" =: (T.pack $ show $ length $ _schedule hh)
+        <> "style" =: "vertical-align:middle" 
+        <> "class" =: "is-hidden-mobile"
   _c1 <- elDynAttr "td" (mkRestRow <$> dA) $ elDynAttr "a" (mkLinkAttrs <$> dA) (dynText (_restaurant <$> dA))
   _c2 <- elDynAttr "td" (mkCityRow <$> dA) $ dynText $ _city <$> dA
   _common <- createCommonRow dS
@@ -214,22 +226,19 @@ staticBtnAttr True =
 staticBtnAttr False =
   "class" =:  "button is-small is-rounded is-static"
 
-printDayShort :: DayOfWeek -> T.Text 
-printDayShort day = case day of
-  Monday -> "M"
-  Tuesday -> "T"
-  Wednesday -> "W"
-  Thursday -> "T"
-  Friday -> "F"
-  Saturday -> "S"
-  Sunday -> "S"
-
 -- Given a dynamic list of event tuples, 
 flattenDynList :: Reflex t => Dynamic t [(Event t a, Event t b)] -> (Event t a, Event t b)
 flattenDynList dxs = 
   let dLeft = leftmost <$> (fmap . fmap) fst dxs
       dRight = leftmost <$> (fmap . fmap) snd dxs
   in  (switchDyn dLeft, switchDyn dRight)
+
+-- class    (s ~ [UnList s], s' ~ Int) => C s s'
+-- instance (s ~ [UnList s], s' ~ Int) => C s s'
+-- type family UnList a :: * where UnList [a] = a
+
+-- mapPair :: ([a], [b]) -> (Int, Int)
+-- mapPair = gmap @C length
 
 tagA :: Reflex t => Dynamic t HappyHour -> Event t () -> Event t UUID
 tagA dA e = fmapMaybe _id $ tag (current dA) e

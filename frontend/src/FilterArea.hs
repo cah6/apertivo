@@ -28,13 +28,16 @@ import FrontendCommon
 
 ----- DOM elements for filter area -----
 
-filterSection ::  MonadWidget t m => m (Dynamic t SearchFilter, Event t ())
-filterSection = do 
+filterSection ::  MonadWidget t m 
+  => DayOfWeek 
+  -> TimeOfDay
+  -> m (Dynamic t SearchFilter, Event t ())
+filterSection dow tod = do 
   elClass "div" "columns" $ do 
     restaurantVal <- elClass "div" "column is-narrow" $ filterBubbleInput "Restaurant"
     cityVal <- elClass "div" "column is-narrow" $ filterBubbleCity "Detroit" ["San Francisco", "Detroit"]
-    dayVal <- elClass "div" "column is-narrow" $ filterBubbleDay Monday
-    timeVal <- elClass "div" "column is-narrow" $ timeSelect (TimeOfDay 17 0 0) "clock"
+    dayVal <- elClass "div" "column is-narrow" $ filterBubbleDay dow
+    timeVal <- elClass "div" "column is-narrow" $ timeSelect tod "clock"
     descriptionVal <- elClass "div" "column" $ filterBubbleInput "Description filter"
     eCreateClicked <- elClass "div" "column" $ createButton "Create New"
     let dSearchFilter = SearchFilter
