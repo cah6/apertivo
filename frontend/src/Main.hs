@@ -18,15 +18,17 @@
 module Main where
 
 import Prelude hiding (id)
-
 import qualified Data.Text as T
+import qualified Network.Wreq as N
+
 import Control.Lens
 import Control.Monad (void)
 import Control.Monad.IO.Class (liftIO)
+import Data.Aeson.Lens
 import Data.Bifunctor (first)
 import Data.Coerce (coerce)
 import Data.FileEmbed
-import Data.List (sortBy)
+import Data.List (nub, sortBy)
 import Data.Maybe (listToMaybe)
 import Data.Map (fromList, toList, Map)
 import Data.Monoid ((<>))
@@ -65,7 +67,7 @@ body = do
   _ <- makeHero
   started <- getPostBuild
   eQueryResults <- queryHH started
-  _ <- searchTab (sortBy (comparing _restaurant) <$> eQueryResults)
+  _ <- searchTab started (sortBy (comparing _restaurant) <$> eQueryResults)
   return ()
 
 makeHero :: MonadWidget t m => m ()
@@ -75,11 +77,16 @@ makeHero =
       elClass "h1" "title" $ text "Apertivo"
       elClass "h2" "subtitle" $ text "The Happy Hour Finder"
 
-searchTab :: MonadWidget t m => Event t [HappyHour] -> m ()
-searchTab eInitQueryResults = elClass "div" "box" $ mdo
+searchTab :: MonadWidget t m 
+  => Event t ()
+  -> Event t [HappyHour] 
+  -> m ()
+searchTab ePostBuild eInitQueryResults = elClass "div" "box" $ mdo
   (dow, tod) <- liftIO getCurrentTimeAndDay
-  (dynSearchFilter, eCreateClicked) <- filterSection dow (roundTimeUp tod)
-  dynMaybeHH <- removingModal ((\_ -> defaultHH) <$> eCreateClicked) createModal
+  city <- performEvent $ ffor eInitQueryResults $ \_ -> liftIO getCurrentCityFromIp
+  let filterSectionConfig = FilterSectionConfig dow (roundTimeUp tod) city (toCities <$> eInitQueryResults)
+  (dynSearchFilter, eCreateClicked) <- filterSection filterSectionConfig
+  dynMaybeHH <- removingModal ((\_ -> defaultHH { _schedule = [defaultSchedule]}) <$> eCreateClicked) createModal
   let eCreateSubmitted = switchDyn $ flattenMaybe <$> dynMaybeHH
       eQueryResults = QueryResults <$> eInitQueryResults
   eNewUUID <- createHH eCreateSubmitted
@@ -100,6 +107,17 @@ searchTab eInitQueryResults = elClass "div" "box" $ mdo
     newlyUpdatedRows <- foldDyn reduceTableUpdate [defaultHH] eTableAction
     return ()
   return ()
+
+toCities :: [HappyHour] -> [T.Text]
+toCities as = nub $ _city <$> as
+
+getCurrentCityFromIp :: IO T.Text
+getCurrentCityFromIp = do
+  r <- N.get "https://geoip-db.com/json"
+  return $ r ^. N.responseBody . key "city" . _String
+
+getCurrentCityFromIp' :: IO T.Text
+getCurrentCityFromIp' = return "Portland"
 
 -- "Zips" two events in time. 
 -- I.e. returns an event that fires when both events have come in. 

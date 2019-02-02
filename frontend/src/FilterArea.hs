@@ -14,7 +14,7 @@ module FilterArea where
 import Prelude hiding (id)
 import qualified Data.Text as T
 
-import Data.List (intersect, sortBy)
+import Data.List (intersect, nub, sortBy)
 import Data.Map (fromList, Map)
 import Data.Maybe (mapMaybe)
 import Data.Ord (comparing)
@@ -28,16 +28,22 @@ import FrontendCommon
 
 ----- DOM elements for filter area -----
 
+data FilterSectionConfig t = FilterSectionConfig
+  { _currentDay :: DayOfWeek
+  , _currentTime :: TimeOfDay
+  , _eCurrentCity :: Event t T.Text
+  , _eAvailableCities :: Event t [T.Text]
+  }
+
 filterSection ::  MonadWidget t m 
-  => DayOfWeek 
-  -> TimeOfDay
+  => FilterSectionConfig t
   -> m (Dynamic t SearchFilter, Event t ())
-filterSection dow tod = do 
+filterSection config = do 
   elClass "div" "columns" $ do 
     restaurantVal <- elClass "div" "column is-narrow" $ filterBubbleInput "Restaurant"
-    cityVal <- elClass "div" "column is-narrow" $ filterBubbleCity "Detroit" ["San Francisco", "Detroit"]
-    dayVal <- elClass "div" "column is-narrow" $ filterBubbleDay dow
-    timeVal <- elClass "div" "column is-narrow" $ timeSelect tod "clock"
+    cityVal <- elClass "div" "column is-narrow" $ filterBubbleCity (_eCurrentCity config) (_eAvailableCities config)
+    dayVal <- elClass "div" "column is-narrow" $ filterBubbleDay (_currentDay config)
+    timeVal <- elClass "div" "column is-narrow" $ timeSelect (_currentTime config) "clock"
     descriptionVal <- elClass "div" "column" $ filterBubbleInput "Description filter"
     eCreateClicked <- elClass "div" "column" $ createButton "Create New"
     let dSearchFilter = SearchFilter
@@ -56,12 +62,28 @@ filterBubbleInput initial = do
   return $ _textInput_value ti
 
 filterBubbleCity :: (MonadWidget t m) 
-  => T.Text
-  -> [T.Text]
+  => Event t T.Text
+  -> Event t [T.Text]
   -> m (Dynamic t T.Text)
-filterBubbleCity initial options = elClass "div" "select is-primary is-rounded" $ do
-  dd <- dropdown initial (constDyn $ fromList (zip options options)) def
+filterBubbleCity eCurrentCity eDropdownValues = elClass "div" "select is-primary is-rounded" $ do
+  -- dynOptions <- holdDyn mempty $ toSameMap <$> eDropdownValues
+  dynOptions <- nubMerge eCurrentCity eDropdownValues
+  -- let dynOptions = (constDyn (toSameMap ["San Francisco", "Detroit"]))
+  eSetCity <- delay 0.1 eCurrentCity
+  dd <- dropdown "" (toSameMap <$> dynOptions) $ def { _dropdownConfig_setValue = eSetCity }
   return (_dropdown_value dd)
+
+nubMerge :: MonadWidget t m
+  => Event t T.Text
+  -> Event t [T.Text]
+  -> m (Dynamic t [T.Text])
+nubMerge e1 e2 = do
+  dynSingle <- holdDyn "" e1 
+  dynList <- holdDyn [] e2
+  return $ zipDynWith (:) dynSingle dynList
+
+reduceCityInput :: Map T.Text T.Text -> Map T.Text T.Text -> Map T.Text T.Text
+reduceCityInput citiesInQuery initial = citiesInQuery <> initial
 
 filterBubbleDay :: (MonadWidget t m) 
   => DayOfWeek
@@ -74,6 +96,9 @@ filterBubbleDay initial = elClass "div" "field has-addons" $ do
 
 toShowMap :: (Ord a, Show a) => [a] -> Map a T.Text
 toShowMap xs = fromList $ zip xs (T.pack . show <$> xs)
+
+toSameMap :: [T.Text] -> Map T.Text T.Text
+toSameMap xs = fromList $ zip xs xs
 
 createButton :: MonadWidget t m => T.Text -> m (Event t ())
 createButton s = do
@@ -150,8 +175,12 @@ timeMatches (Just timeFilter) a =
         then Just a 
         else Just $ a { _schedule = matchingSchedules }
 
+-- Exclusive NOR between (start < end) and isBetween
 isTimeBetween :: TimeOfDay -> TimeRange -> Bool
-isTimeBetween tod (TimeRange (start, end)) = tod >= start && tod <= end
+isTimeBetween tod (TimeRange (start, end)) 
+  | start < end = isBetween
+  | otherwise   = not isBetween
+  where isBetween = tod >= start && tod <= end
 
 anyScheduleContains :: HappyHour -> T.Text -> Bool
 anyScheduleContains x scheduleFilter = any (T.isInfixOf scheduleFilter . _scheduleDescription) (_schedule x)
