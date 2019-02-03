@@ -11,7 +11,20 @@
 {-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-module CreateModal(createModal, dayOfWeekBtns, timeSelect, enabledDays) where
+module CreateModal(
+    createModal
+  , dayOfWeekBtns
+  , timeSelect
+  , enabledDays
+  , timeOfDaySelect
+  , amPmSelect
+  , amOrPm
+  , adjustTime
+  , normalizeTo12Hour
+  , timeOptions
+  , AmPm
+  , amPmMap
+  ) where
 
 import qualified Data.Map.Lazy as M
 import qualified Data.Text as T
@@ -207,7 +220,6 @@ timeOfDaySelect initial iconName =
     elClass "span" "select is-rounded is-primary" $ do
       selected <- dropdown initial (constDyn timeOptions) def
       return (_dropdown_value selected)
-
 
 amPmSelect :: MonadWidget t m 
   => AmPm

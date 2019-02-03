@@ -16,7 +16,7 @@ import qualified Data.Text as T
 
 import Data.List (intersect, nub, sortBy)
 import Data.Map (fromList, Map)
-import Data.Maybe (mapMaybe)
+import Data.Maybe (mapMaybe, maybeToList)
 import Data.Ord (comparing)
 import Data.Time.LocalTime (TimeOfDay(..))
 import Data.UUID (UUID)
@@ -41,17 +41,17 @@ filterSection ::  MonadWidget t m
 filterSection config = do 
   elClass "div" "columns" $ do 
     restaurantVal <- elClass "div" "column is-narrow" $ filterBubbleInput "Restaurant"
-    cityVal <- elClass "div" "column is-narrow" $ filterBubbleCity (_eCurrentCity config) (_eAvailableCities config)
-    dayVal <- elClass "div" "column is-narrow" $ filterBubbleDay (_currentDay config)
-    timeVal <- elClass "div" "column is-narrow" $ timeSelect (_currentTime config) "clock"
+    maybeDayVal <- elClass "div" "column is-narrow" $ filterBubbleDay (_currentDay config)
+    maybeTimeVal <- elClass "div" "column is-narrow" $ filterTimeSelect (_currentTime config)
     descriptionVal <- elClass "div" "column" $ filterBubbleInput "Description filter"
+    cityVal <- elClass "div" "column is-narrow" $ filterBubbleCity (_eCurrentCity config) (_eAvailableCities config)
     eCreateClicked <- elClass "div" "column" $ createButton "Create New"
     let dSearchFilter = SearchFilter
           <$> cityVal 
           <*> restaurantVal 
           <*> descriptionVal 
-          <*> fmap pure dayVal 
-          <*> (Just <$> timeVal)
+          <*> fmap maybeToList maybeDayVal 
+          <*> maybeTimeVal
     return $ (dSearchFilter, eCreateClicked)
 
 filterBubbleInput :: MonadWidget t m => T.Text -> m (Dynamic t T.Text)
@@ -67,32 +67,102 @@ filterBubbleCity :: (MonadWidget t m)
   -> m (Dynamic t T.Text)
 filterBubbleCity eCurrentCity eDropdownValues = elClass "div" "select is-primary is-rounded" $ do
   -- dynOptions <- holdDyn mempty $ toSameMap <$> eDropdownValues
-  dynOptions <- nubMerge eCurrentCity eDropdownValues
+  dynOptions <- dynMappend (pure <$> eCurrentCity) eDropdownValues
   -- let dynOptions = (constDyn (toSameMap ["San Francisco", "Detroit"]))
   eSetCity <- delay 0.1 eCurrentCity
   dd <- dropdown "" (toSameMap <$> dynOptions) $ def { _dropdownConfig_setValue = eSetCity }
   return (_dropdown_value dd)
 
-nubMerge :: MonadWidget t m
-  => Event t T.Text
-  -> Event t [T.Text]
-  -> m (Dynamic t [T.Text])
-nubMerge e1 e2 = do
-  dynSingle <- holdDyn "" e1 
-  dynList <- holdDyn [] e2
-  return $ zipDynWith (:) dynSingle dynList
+-- Converts both events to dynamics, then mappends those dynamics together.
+-- Needs to be in larger m monad as holdDyn requires this. 
+dynMappend :: (MonadWidget t m, Monoid a)
+  => Event t a
+  -> Event t a
+  -> m (Dynamic t a)
+dynMappend e1 e2 = do 
+  de1 <- holdDyn mempty e1
+  de2 <- holdDyn mempty e2
+  return $ de1 <> de2
 
 reduceCityInput :: Map T.Text T.Text -> Map T.Text T.Text -> Map T.Text T.Text
 reduceCityInput citiesInQuery initial = citiesInQuery <> initial
 
 filterBubbleDay :: (MonadWidget t m) 
   => DayOfWeek
-  -> m (Dynamic t DayOfWeek)
-filterBubbleDay initial = elClass "div" "field has-addons" $ do 
-  elClass "div" "control" $ elClass "a" "button is-rounded is-primary is-outlined" $ iconNoButton "check"
-  elClass "div" "control" $ elClass "div" "select is-rounded is-primary" $ do
-    dd <- dropdown initial (constDyn $ toShowMap [Sunday .. Saturday]) def
-    return (_dropdown_value dd)
+  -> m (Dynamic t (Maybe DayOfWeek))
+filterBubbleDay initial = divAddons $ do 
+  isActive <- divControl toggleButton
+  divControl $ elDynAttr "div" (dropdownContainerRoundAttr <$> isActive) $ do
+    dd <- dropdown initial (constDyn $ toShowMap [Sunday .. Saturday]) $ def { _dropdownConfig_attributes = dropdownAttrs <$> isActive}
+    return $ zipDynWith toMaybe (_dropdown_value dd) isActive
+
+filterTimeSelect :: MonadWidget t m 
+  => TimeOfDay
+  -> m (Dynamic t (Maybe TimeOfDay))
+filterTimeSelect initial = divAddons $ do
+  isActive <- divControl toggleButton
+  dynTimeOfDay <- timeOfDaySelectNoIcon (normalizeTo12Hour initial) isActive
+  dynAmPm <- toggleAmPmSelect (amOrPm initial) isActive
+  return $ zipDynWith toMaybe (zipDynWith adjustTime dynAmPm dynTimeOfDay) isActive
+
+timeOfDaySelectNoIcon :: MonadWidget t m 
+  => TimeOfDay
+  -> Dynamic t Bool
+  -> m (Dynamic t TimeOfDay)
+timeOfDaySelectNoIcon initial isActive = divControl $ elDynAttr "div" (dropdownContainerSquareAttr <$> isActive) $ do
+  selected <- dropdown initial (constDyn timeOptions) $ def { _dropdownConfig_attributes = dropdownAttrs <$> isActive}
+  return (_dropdown_value selected)
+
+toggleAmPmSelect :: MonadWidget t m 
+  => AmPm
+  -> Dynamic t Bool
+  -> m (Dynamic t AmPm)
+toggleAmPmSelect initial isActive =
+  divControl $
+    elDynAttr "span" (dropdownContainerRoundAttr <$> isActive) $ do
+      selected <- dropdown initial (constDyn amPmMap) $ def { _dropdownConfig_attributes = dropdownAttrs <$> isActive}
+      return (_dropdown_value selected)
+
+divAddons :: MonadWidget t m => m a -> m a
+divAddons = elClass "div" "field has-addons"
+
+divControl :: MonadWidget t m => m a -> m a
+divControl = elClass "div" "control"
+
+divControl' :: MonadWidget t m => m a -> m (El t, a)
+divControl' = elClass' "div" "control"
+
+dropdownContainerRoundAttr :: Bool -> Map T.Text T.Text
+dropdownContainerRoundAttr isActive = if isActive 
+  then
+    "class" =: "select is-rounded is-primary"
+  else
+    "class" =: "select is-rounded"
+
+dropdownContainerSquareAttr :: Bool -> Map T.Text T.Text
+dropdownContainerSquareAttr isActive = if isActive 
+  then
+    "class" =: "select is-primary"
+  else
+    "class" =: "select"
+
+dropdownAttrs :: Bool -> Map T.Text T.Text
+dropdownAttrs isActive = if isActive 
+  then
+    "class" =: "select is-rounded is-primary"
+  else
+    "class" =: "select is-rounded has-background-white-ter is-outlined"
+
+buttonAttrs :: Bool -> Map T.Text T.Text
+buttonAttrs isActive = if isActive
+  then
+    "class" =: "button is-rounded is-outlined is-primary"
+  else
+    "class" =: "button is-rounded is-outlined has-background-white-ter"
+
+toMaybe :: a -> Bool -> Maybe a
+toMaybe a True = Just a
+toMaybe _ False = Nothing 
 
 toShowMap :: (Ord a, Show a) => [a] -> Map a T.Text
 toShowMap xs = fromList $ zip xs (T.pack . show <$> xs)
@@ -194,3 +264,9 @@ schedulesThatContain scheduleFilter a =
   in  if (length matchingSchedules == length (_schedule a)) 
         then Just a 
         else Just $ a { _schedule = matchingSchedules } 
+
+toggleButton :: MonadWidget t m => m (Dynamic t Bool)
+toggleButton = mdo 
+  (btn, _) <- elDynAttr' "a" (buttonAttrs <$> isActive) $ toggleIcon isActive
+  isActive <- toggle True (domEvent Click btn)
+  return isActive

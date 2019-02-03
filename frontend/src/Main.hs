@@ -152,9 +152,6 @@ openModalEvent dA eEdit =
       extract as uuid = listToMaybe $ filter ((==) (Just uuid) . view id) as
   in  attachPromptlyDynWithMaybe extract dA (coerce <$> eEdit)
 
-cols :: [T.Text]
-cols = ["Restaurant", "City", "Days", "Time", "Description", "Action"]
-
 type RowAction t = (Event t DeleteClicked, Event t EditClicked)
 
 newtype DeleteClicked = DeleteClicked UUID

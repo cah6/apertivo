@@ -54,3 +54,13 @@ icon name = do
 
 iconNoButton :: MonadWidget t m => T.Text -> m ()
 iconNoButton name = elClass "span" "icon" $ elClass "i" ("fas fa-" <> name) blank
+
+toggleIcon :: MonadWidget t m => Dynamic t Bool -> m ()
+toggleIcon isActive = elClass "span" "icon" $ elDynClass "i" (toggleIconClass <$> isActive) blank
+
+toggleIconClass :: Bool -> T.Text
+toggleIconClass isActive = if isActive 
+  then
+    "fas fa-toggle-on is-primary"
+  else
+    "fas fa-toggle-off"
