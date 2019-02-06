@@ -25,7 +25,7 @@ reflex-platform.project ({ pkgs, ... }: {
     servant = pkgs.haskell.lib.dontCheck super.servant;
     # http-date = pkgs.haskell.lib.dontCheck super.http-date;
     # iproute = pkgs.haskell.lib.dontCheck super.iproute;
-    # lens-aeson = pkgs.haskell.lib.dontCheck super.lens-aeson;
+    lens-aeson = pkgs.haskell.lib.dontCheck super.lens-aeson;
     # mockery = pkgs.haskell.lib.dontCheck super.mockery;
     # unix-time = pkgs.haskell.lib.dontCheck super.unix-time;
     # silently = pkgs.haskell.lib.dontCheck super.silently;

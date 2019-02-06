@@ -72,7 +72,6 @@ executable frontend
                , common
                , containers
                , file-embed
-               , google-maps-geocoding
                , http-client
                , jsaddle
                , jsaddle-warp
