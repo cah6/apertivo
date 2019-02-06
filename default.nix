@@ -20,8 +20,24 @@ reflex-platform.project ({ pkgs, ... }: {
     #             rev="b423436565fce7f69a65d843c71fc52dc455bf54";
     #             sha256="09plndkh5wnbqi34x3jpaz0kjdjgyf074faf5xk97rsm81vhz8kk";
     #           }) self).jsaddle;
+    # These require doctest, which doesn't work on ghcjs. dontCheck ensures that build doesn't break on doctest.
     http-media = pkgs.haskell.lib.dontCheck super.http-media;
     servant = pkgs.haskell.lib.dontCheck super.servant;
+    http-date = pkgs.haskell.lib.dontCheck super.http-date;
+    iproute = pkgs.haskell.lib.dontCheck super.iproute;
+    lens-aeson = pkgs.haskell.lib.dontCheck super.lens-aeson;
+    mockery = pkgs.haskell.lib.dontCheck super.mockery;
+    unix-time = pkgs.haskell.lib.dontCheck super.unix-time;
+    silently = pkgs.haskell.lib.dontCheck super.silently;
+    markdown-unlit = pkgs.haskell.lib.dontCheck super.markdown-unlit;
+    wai-extra = pkgs.haskell.lib.dontCheck super.wai-extra;
+    Glob = pkgs.haskell.lib.dontCheck super.Glob;
+    http2 = pkgs.haskell.lib.dontCheck super.http2;
+    bsb-http-chunked = pkgs.haskell.lib.dontCheck super.bsb-http-chunked;
+    wai-app-static = pkgs.haskell.lib.dontCheck super.wai-app-static;
+    servant-server = pkgs.haskell.lib.dontCheck super.servant-server;
+    servant-client = pkgs.haskell.lib.dontCheck super.servant-client;
+    double-conversion = pkgs.haskell.lib.dontCheck super.double-conversion;
     # doctest = self.callPackage ./nix/doctest.nix { };
     servant-reflex = self.callPackage ./nix/servant-reflex.nix { };
   };

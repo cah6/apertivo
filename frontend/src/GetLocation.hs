@@ -27,7 +27,6 @@ import Data.Text
 import Language.Javascript.JSaddle
 import Language.Javascript.JSaddle.Object
 import Language.Javascript.JSaddle.Value
-import GHCJS.DOM.Element
 import Reflex.Dom.Core hiding (Element)
 import GHC.Generics
 

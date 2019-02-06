@@ -75,6 +75,7 @@ executable frontend
                , file-embed
                , google-maps-geocoding
                , http-client
+               , jsaddle
                , jsaddle-warp
                , lens
                , lens-aeson
