@@ -219,7 +219,7 @@ confirmDeleteModal :: MonadWidget t m
 confirmDeleteModal hh = do
   elClass "div" "modal-background" blank
   elClass "div" "modal-card" $ do
-    _ <- elClass "section" "modal-card-body" $ text $ "Are you sure you want to delete entry for " <> hh ^. restaurant <> "?"
+    _ <- elClass "section" "modal-card-body" $ text $ "Are you sure you want to delete ALL schedules for " <> hh ^. restaurant <> "?"
     (eSubmit, eCancel) <- elClass "footer" "modal-card-foot" $ do
       eSubmit <- b_button "Yes"
       eCancel <- b_button "No"
