@@ -115,14 +115,6 @@ searchTab ePostBuild eInitQueryResults = elClass "div" "box" $ mdo
 toCities :: [HappyHour] -> [T.Text]
 toCities as = nub $ _city <$> as
 
-getCurrentCityFromIp :: IO T.Text
-getCurrentCityFromIp = do
-  r <- N.get "https://geoip-db.com/json"
-  return $ r ^. N.responseBody . key "city" . _String
-
-getCurrentCityFromIp' :: IO T.Text
-getCurrentCityFromIp' = return "Portland"
-
 -- "Zips" two events in time. 
 -- I.e. returns an event that fires when both events have come in. 
 alignLatest :: MonadWidget t m

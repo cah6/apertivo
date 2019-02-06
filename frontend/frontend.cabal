@@ -59,7 +59,6 @@ library
                , these
                , time
                , uuid
-               , wreq
   exposed-modules:
     Main
     ServantReflexClient
@@ -87,7 +86,6 @@ executable frontend
                , text
                , time
                , uuid
-               , wreq
   --TODO: Make these ghc-options optional
   ghc-options: -threaded
   if os(darwin)
