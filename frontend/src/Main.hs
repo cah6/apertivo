@@ -29,7 +29,7 @@ import Data.Bifunctor (first)
 import Data.Coerce (coerce)
 import Data.FileEmbed
 import Data.List (nub, sortBy)
-import Data.Maybe (listToMaybe)
+import Data.Maybe (isJust, listToMaybe)
 import Data.Map (fromList, toList, Map)
 import Data.Monoid ((<>))
 import Data.Ord (comparing)
@@ -203,8 +203,28 @@ createHeadRow dA dS = el "tr" $ do
   c6 <- elDynAttr "td" (mkActionRow <$> dA) $ do
     eEdit <- icon "edit"
     eDelete <- icon "trash-alt"
-    return (DeleteClicked <$> tagA dA eDelete, EditClicked <$> tagA dA eEdit)
+    dynShouldDelete <- removingModal (tag (current dA) eDelete) confirmDeleteModal
+    let eShouldDelete = switchDyn $ flattenMaybe <$> dynShouldDelete
+    -- gate (flattenBool <$> current dynShouldDelete) (() <$ updated dynShouldDelete)
+    return (DeleteClicked <$> tagA dA eShouldDelete, EditClicked <$> tagA dA eEdit)
   return c6
+
+flattenBool :: Maybe Bool -> Bool
+flattenBool Nothing = False
+flattenBool (Just b) = b
+
+confirmDeleteModal :: MonadWidget t m
+  => HappyHour
+  -> m (Event t (), Event t ())
+confirmDeleteModal hh = do
+  elClass "div" "modal-background" blank
+  elClass "div" "modal-card" $ do
+    _ <- elClass "section" "modal-card-body" $ text $ "Are you sure you want to delete entry for " <> hh ^. restaurant <> "?"
+    (eSubmit, eCancel) <- elClass "footer" "modal-card-foot" $ do
+      eSubmit <- b_button "Yes"
+      eCancel <- b_button "No"
+      return (eSubmit, eCancel)
+    return (eSubmit, leftmost [eCancel, eSubmit])
 
 -- These rows don't need as many columns, since those are already "filled" by
 -- the rowspan in head row.

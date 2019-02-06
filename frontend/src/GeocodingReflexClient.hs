@@ -12,7 +12,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module GeocodingReflexClient where 
+module GeocodingReflexClient(
+    getCity
+  ) where 
 
 import Data.Maybe (listToMaybe, mapMaybe)
 import Data.UUID
@@ -35,6 +37,8 @@ geocoderClients = client api (Proxy @m) (Proxy @()) (constDyn url)
 geoKey :: Text 
 geoKey = "AIzaSyDxM3_sjDAP1kDHzbRMkZ6Ky7BYouXfVOs"
 
+-- Reflex bindings to google API, for docs see
+-- http://hackage.haskell.org/package/google-maps-geocoding-0.5.0.0/docs/Web-Google-Geocoding.html
 genGeocode :: MonadWidget t m
   => Dynamic t (QParam Web.Google.Maps.Geocoding.Key)
   -> Dynamic t (QParam Address)
@@ -80,7 +84,7 @@ resultToMaybeCity :: Result -> Maybe Text
 resultToMaybeCity Result{address_components, ..} = listToMaybe $ mapMaybe addressToMaybeCity address_components
 
 addressToMaybeCity :: AddressComponent -> Maybe Text
-addressToMaybeCity AddressComponent{address_component_types, ..} = 
+addressToMaybeCity AddressComponent{address_component_types, long_name, ..} = 
   let isLocality = any (\t -> (==) t (AddressType "locality")) address_component_types 
   in  case isLocality of 
         False -> Nothing
