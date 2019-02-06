@@ -44,6 +44,7 @@ library
                , containers
                , file-embed
                , ghcjs-dom
+               , google-maps-geocoding
                , http-client
                , jsaddle
                , jsaddle-warp
@@ -73,16 +74,20 @@ executable frontend
                , common
                , containers
                , file-embed
+               , google-maps-geocoding
                , http-client
                , jsaddle-warp
                , lens
+               , lens-aeson
                , mtl
+               , one-liner
                , reflex-dom
                , servant
                , servant-reflex
                , text
                , time
                , uuid
+               , wreq
   --TODO: Make these ghc-options optional
   ghc-options: -threaded
   if os(darwin)

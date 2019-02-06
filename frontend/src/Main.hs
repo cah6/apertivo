@@ -36,20 +36,23 @@ import Data.Ord (comparing)
 import Data.Text.Encoding (decodeUtf8)
 import Data.UUID (UUID)
 import Generics.OneLiner
+import Language.Javascript.JSaddle (liftJSM)
 import Language.Javascript.JSaddle.Warp
 import Reflex.Dom.Core
 
 import Common.Dto
 import CreateModal
+import GeocodingReflexClient
 import FilterArea
 import FrontendCommon
+import GetLocation
 import ServantReflexClient
 
 main :: IO ()
 main = run 3003 $ mainWidgetWithHead frontendHead (prerender (text "Loading...") body)
 -- import Autocomplete
 -- main :: IO ()
--- main = run 3003 $ mainWidgetWithHead frontendHead (prerender (text "Loading...") autocompleteBoxMain)
+-- main = run 3003 $ mainWidgetWithHead frontendHead (prerender (text "Loading...") locationMain)
 
 frontendHead :: forall t m. MonadWidget t m => m ()
 frontendHead = do
@@ -83,7 +86,8 @@ searchTab :: MonadWidget t m
   -> m ()
 searchTab ePostBuild eInitQueryResults = elClass "div" "box" $ mdo
   (dow, tod) <- liftIO getCurrentTimeAndDay
-  city <- performEvent $ ffor eInitQueryResults $ \_ -> liftIO getCurrentCityFromIp
+  coords <- eGetLocation
+  city <- getCity coords
   let filterSectionConfig = FilterSectionConfig dow (roundTimeUp tod) city (toCities <$> eInitQueryResults)
   (dynSearchFilter, eCreateClicked) <- filterSection filterSectionConfig
   dynMaybeHH <- removingModal ((\_ -> defaultHH { _schedule = [defaultSchedule]}) <$> eCreateClicked) createModal

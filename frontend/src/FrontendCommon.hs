@@ -9,6 +9,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module FrontendCommon where
 
+import Data.Maybe (fromJust, isJust)
 import qualified Data.Text as T
 
 import Reflex.Dom 
@@ -39,6 +40,9 @@ horizontalInputWithInit initial label = elAttr "div" ("class" =: "field") $ do
 flattenMaybe :: Reflex t => Maybe (Event t a) -> Event t a
 flattenMaybe Nothing  = never
 flattenMaybe (Just a) = a
+
+flattenMaybe' :: Reflex t => Event t (Maybe a) -> Event t a
+flattenMaybe' e = fromJust <$> ffilter isJust e
 
 boolToMaybe :: Bool -> a -> Maybe a
 boolToMaybe True a = Just a
