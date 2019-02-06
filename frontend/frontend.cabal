@@ -44,7 +44,6 @@ library
                , containers
                , file-embed
                , ghcjs-dom
-               , google-maps-geocoding
                , http-client
                , jsaddle
                , jsaddle-warp

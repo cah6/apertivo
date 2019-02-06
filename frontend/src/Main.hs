@@ -59,8 +59,8 @@ frontendHead = do
   el "title" $ text "Apertivo"
   elAttr "meta" ("name" =: "viewport" <> "content" =: "initial-scale=1.0, width=device-width") blank
   -- todo: don't hardcode this!
-  -- el "style" $ text $ decodeUtf8 $(embedFile "/Users/christian.henry/coding/haskell/apertivo/css/mystyles.css")
-  el "style" $ text $ decodeUtf8 $(embedFile "/home/cah6/coding/haskell/apertivo/css/mystyles.css")
+  el "style" $ text $ decodeUtf8 $(embedFile "/Users/christian.henry/coding/haskell/apertivo/css/mystyles.css")
+  -- el "style" $ text $ decodeUtf8 $(embedFile "/home/cah6/coding/haskell/apertivo/css/mystyles.css")
   -- elAttr "script" ("src" =: "https://maps.googleapis.com/maps/api/js?key=AIzaSyBZiVkgP8la1GHQw_ZJXNQl0N8dGCOW62c&libraries=places"
   --     <> "async" =: "true" <> "defer" =: "true") blank
   return ()

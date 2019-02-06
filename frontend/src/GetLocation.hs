@@ -55,7 +55,7 @@ getLocation = \needsCoords -> do
     [ fun $ \_ _ [pos] -> void $ do       
         coords <- pos ^. js "coords"
         toPrint :: Maybe Coordinates <- fromJSVal coords
-        liftIO $ putStrLn (show toPrint)
+        -- liftIO $ putStrLn (show toPrint)
         needsCoords toPrint
     ]
   return ()

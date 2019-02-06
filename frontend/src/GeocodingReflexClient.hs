@@ -23,7 +23,7 @@ import Data.Text hiding (any)
 import Servant.API
 import Servant.Reflex
 import Data.Proxy
-import Web.Google.Maps.Geocoding
+import Web.Google.Geocoding
 
 import FrontendCommon
 import GetLocation
@@ -40,7 +40,7 @@ geoKey = "AIzaSyDxM3_sjDAP1kDHzbRMkZ6Ky7BYouXfVOs"
 -- Reflex bindings to google API, for docs see
 -- http://hackage.haskell.org/package/google-maps-geocoding-0.5.0.0/docs/Web-Google-Geocoding.html
 genGeocode :: MonadWidget t m
-  => Dynamic t (QParam Web.Google.Maps.Geocoding.Key)
+  => Dynamic t (QParam Web.Google.Geocoding.Key)
   -> Dynamic t (QParam Address)
   -> Dynamic t (QParam [FilterComponent])
   -> Dynamic t (QParam Viewport)
@@ -49,7 +49,7 @@ genGeocode :: MonadWidget t m
   -> Event t ()
   -> m (Event t (ReqResult () GeocodingResponse))
 genBackGeocode :: MonadWidget t m
-  => Dynamic t (QParam Web.Google.Maps.Geocoding.Key)
+  => Dynamic t (QParam Web.Google.Geocoding.Key)
   -> Dynamic t (QParam LatLng)
   -> Dynamic t (QParam PlaceId)
   -> Dynamic t (QParam AddressType)
