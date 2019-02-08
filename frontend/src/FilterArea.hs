@@ -245,12 +245,10 @@ timeMatches (Just timeFilter) a =
         then Just a 
         else Just $ a { _schedule = matchingSchedules }
 
--- Exclusive NOR between (start < end) and isBetween
 isTimeBetween :: TimeOfDay -> TimeRange -> Bool
 isTimeBetween tod (TimeRange (start, end)) 
-  | start < end = isBetween
-  | otherwise   = not isBetween
-  where isBetween = tod >= start && tod <= end
+  | start < end = tod >= start && tod <= end
+  | otherwise   = tod >= start || tod <= end
 
 anyScheduleContains :: HappyHour -> T.Text -> Bool
 anyScheduleContains x scheduleFilter = any (T.isInfixOf scheduleFilter . _scheduleDescription) (_schedule x)
