@@ -74,6 +74,8 @@ defaultHH = HappyHour
   , _restaurant = ""
   , _schedule = []
   , _link = ""
+  , _latLng = defaultLL
+  , _placeId = ""
   }
 
 data HappyHour = HappyHour
@@ -82,13 +84,40 @@ data HappyHour = HappyHour
   , _restaurant :: Text
   , _schedule :: [Schedule]
   , _link :: Text
+  , _latLng :: LL
+  , _placeId :: Text
   } deriving (Generic, Show)
 
 instance ToJSON HappyHour where
   toJSON = genericToJSON defaultOptions { fieldLabelModifier = drop 1 }
 
 instance FromJSON HappyHour where
+  parseJSON = withObject "happyHour" $ \o -> do
+    _id <- o .:? "id"
+    _city <- o .: "city"
+    _restaurant <- o .: "restaurant"
+    _schedule <- o .: "schedule"
+    _link <- o .: "link" >>= parseJSON
+    _latLng <- o .:? "latLng" .!= defaultLL
+    _placeId <- o .:? "placeId" .!= ""
+    return HappyHour{..}
+
+data LL = LL
+  { _latitude :: Double
+  , _longitude :: Double
+  } deriving (Generic, Show)
+
+instance ToJSON LL where
+  toJSON = genericToJSON defaultOptions { fieldLabelModifier = drop 1 }
+
+instance FromJSON LL where
   parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = drop 1 }
+
+defaultLL :: LL
+defaultLL = LL
+  { _latitude = 0
+  , _longitude = 0
+  }
 
 data Schedule = Schedule
   { _days :: [DayOfWeek]
