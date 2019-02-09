@@ -35,6 +35,7 @@ import Data.Maybe (isJust)
 import Data.Time
 import Reflex.Dom hiding (link)
 
+import Autocomplete
 import Common.Dto
 import FrontendCommon
 
@@ -57,7 +58,10 @@ createFields :: MonadWidget t m
   => HappyHour
   -> m (Dynamic t HappyHour)
 createFields initial = elClass "div" "columns is-multiline" $ do
-  dynRestaurant <- elClass "div" "column is-half" $ bubbleInput (initial ^. restaurant) "Restaurant name"
+  let dynRestaurant = constDyn "Detroit"
+  -- dynRestaurant <- elClass "div" "column is-half" $ bubbleInput (initial ^. restaurant) "Restaurant name"
+  (e, _) <- elClass "div" "column is-half" $ elDynAttr' "input" (constDyn ("type" =: "text" <> "class" =: "input is-rounded is-primary")) blank
+  eText <- eAutocompleteBox (_element_raw e)
   dynCity <- elClass "div" "column is-half" $ bubbleInput (initial ^. city) "City name" -- _textInput_value <$> horizontalInputWithInit (_city initial) "City name:"
   dynLink <- elClass "div" "column is-full" $ bubbleInput (initial ^. link) "Link to description" -- _textInput_value <$> horizontalInputWithInit (_link initial) "Link to description:"
   dynSchedules <- elClass "div" "column is-full" $ scheduleInput (_schedule initial)
