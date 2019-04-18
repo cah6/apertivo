@@ -60,13 +60,35 @@ createFields :: MonadWidget t m
 createFields initial = elClass "div" "columns is-multiline" $ do
   let dynRestaurant = constDyn "Detroit"
   -- dynRestaurant <- elClass "div" "column is-half" $ bubbleInput (initial ^. restaurant) "Restaurant name"
-  (e, _) <- elClass "div" "column is-half" $ elDynAttr' "input" (constDyn ("type" =: "text" <> "class" =: "input is-rounded is-primary")) blank
-  eText <- eAutocompleteBox (_element_raw e)
-  dynCity <- elClass "div" "column is-half" $ bubbleInput (initial ^. city) "City name" -- _textInput_value <$> horizontalInputWithInit (_city initial) "City name:"
-  dynLink <- elClass "div" "column is-full" $ bubbleInput (initial ^. link) "Link to description" -- _textInput_value <$> horizontalInputWithInit (_link initial) "Link to description:"
+  (e, _) <- elClass "div" "column is-full" $ elDynAttr' "input" (constDyn ("type" =: "text" <> "class" =: "input is-rounded is-primary")) blank
+  eIdLlCity <- eAutocompleteBox (_element_raw e)
+  dynLink <- elClass "div" "column is-full" $ bubbleInput (initial ^. link) "Link to description"
+  dynId <- holdDyn (initial ^. placeId) (get1st <$> eIdLlCity) 
+  dynLatLng <- holdDyn (initial ^. latLng) (get2nd <$> eIdLlCity) 
+  dynCity <- holdDyn (initial ^. city) (get3rd <$> eIdLlCity) 
+  _ <- elClass "div" "column is-half" $ staticTextBubble "City: use autocomplete" dynCity
+  _ <- elClass "div" "column is-half" $ staticTextBubble "Id: use autocomplete" dynId
   dynSchedules <- elClass "div" "column is-full" $ scheduleInput (_schedule initial)
-  return $ HappyHour <$> pure (_id initial) <*> dynCity <*> dynRestaurant <*> dynSchedules <*> dynLink
- 
+  return $ HappyHour <$> pure (_id initial) <*> dynCity <*> dynRestaurant <*> dynSchedules <*> dynLink <*> dynLatLng <*> dynId
+
+get1st (x,_,_) = x
+get2nd (_,x,_) = x
+get3rd (_,_,x) = x
+
+staticTextBubble :: MonadWidget t m => T.Text -> Dynamic t T.Text -> m ()
+staticTextBubble initial placeholder = do
+  let pMap = placeholderAttr initial placeholder
+      dMap = pure $ "disabled" =: "true"
+      cMap = pure $ "class" =: "input is-rounded"
+  elDynAttr "input" (mconcat [pMap, dMap, cMap]) blank
+  return ()
+
+placeholderAttr :: Reflex t => T.Text -> Dynamic t T.Text -> Dynamic t (M.Map T.Text T.Text)
+placeholderAttr fallback dynT = f <$> dynT
+    where
+  f t = if t == "" then embed fallback else embed t
+  embed v = "placeholder" =: v
+
 bubbleInput :: MonadWidget t m => T.Text -> T.Text -> m (Dynamic t T.Text)
 bubbleInput initial placeholder = do
   ti <- textInput $ def 
