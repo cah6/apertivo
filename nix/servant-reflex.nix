@@ -1,4 +1,3 @@
-# Not in nix packages yet, so need to manually include from github
 { mkDerivation, base, bytestring, case-insensitive, containers
 , data-default, exceptions, fetchgit, ghcjs-dom, http-api-data
 , http-media, jsaddle, mtl, network-uri, reflex, reflex-dom-core
@@ -7,11 +6,11 @@
 }:
 mkDerivation {
   pname = "servant-reflex";
-  version = "0.3.3";
+  version = "0.3.4";
   src = fetchgit {
     url = "https://github.com/imalsogreg/servant-reflex";
-    sha256 = "127p8pa8zzbagl28558aik38bwnjkv54mh835qzwks0gmvzaif5s";
-    rev = "2bd57a1124fb348fe58eab60947812621d3c2278";
+    sha256 = "009d8vr6mxfm9czywhb8haq8pwvnl9ha2cdmaagk1hp6q4yhfq1n";
+    rev = "44595630e2d1597911ecb204e792d17db7e4a4ee";
   };
   isLibrary = true;
   isExecutable = true;
@@ -21,6 +20,6 @@ mkDerivation {
     reflex-dom-core safe servant servant-auth string-conversions text
     transformers
   ];
-  description = "Servant reflex API generator";
+  description = "servant API generator for reflex apps";
   license = stdenv.lib.licenses.bsd3;
 }

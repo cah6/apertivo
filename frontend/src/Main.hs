@@ -33,8 +33,7 @@ import Data.Map (fromList, toList, Map)
 import Data.Monoid ((<>))
 import Data.Ord (comparing)
 import Data.Text.Encoding (decodeUtf8)
-import Data.UUID (UUID)
-import Generics.OneLiner
+import Data.UUID.Types (UUID)
 import Language.Javascript.JSaddle (liftJSM)
 import Language.Javascript.JSaddle.Warp
 import Reflex.Dom.Core
@@ -59,7 +58,7 @@ frontendHead = do
   -- liftJSM attachToWindow
   el "title" $ text "Apertivo"
   elAttr "meta" ("name" =: "viewport" <> "content" =: "initial-scale=1.0, width=device-width") blank
-  -- todo: don't hardcode this!
+  -- todo: don't hardcode this! somehow?
   el "style" $ text $ decodeUtf8 $(embedFile "/Users/christian.henry/coding/haskell/apertivo/css/mystyles.css")
   -- el "style" $ text $ decodeUtf8 $(embedFile "/home/cah6/coding/haskell/apertivo/css/mystyles.css")
   elAttr "script" ("src" =: "https://maps.googleapis.com/maps/api/js?key=AIzaSyBZiVkgP8la1GHQw_ZJXNQl0N8dGCOW62c&libraries=places"
@@ -264,13 +263,6 @@ flattenDynList dxs =
   let dLeft = leftmost <$> (fmap . fmap) fst dxs
       dRight = leftmost <$> (fmap . fmap) snd dxs
   in  (switchDyn dLeft, switchDyn dRight)
-
--- class    (s ~ [UnList s], s' ~ Int) => C s s'
--- instance (s ~ [UnList s], s' ~ Int) => C s s'
--- type family UnList a :: * where UnList [a] = a
-
--- mapPair :: ([a], [b]) -> (Int, Int)
--- mapPair = gmap @C length
 
 tagA :: Reflex t => Dynamic t HappyHour -> Event t () -> Event t UUID
 tagA dA e = fmapMaybe _id $ tag (current dA) e

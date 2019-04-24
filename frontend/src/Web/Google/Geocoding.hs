@@ -44,7 +44,7 @@ import Data.Proxy
 import Data.Text (Text)
 import qualified Data.Text as T (concat, unpack)
 import GHC.Generics (Generic)
-import Network.HTTP.Client (Manager)
+-- import Network.HTTP.Client (Manager)
 import Servant.API
 import Web.Google.Maps.Common (Address (..), Key (..),
     Language (..), LatLng (..), Location (..), Region (..))

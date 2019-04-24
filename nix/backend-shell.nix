@@ -1,7 +1,6 @@
 { lib ? (import <nixpkgs> {}).pkgs.lib
 }:
 let 
-
   pinnedPkgs = import ./pkgs-from-json.nix { json = ./nixos-18-09.json; };
   myPackages = (import ./backend.nix { withHoogle = false; } );
 

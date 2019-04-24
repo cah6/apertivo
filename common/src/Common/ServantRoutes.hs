@@ -3,7 +3,7 @@ module Common.ServantRoutes where
 
 import Servant.API
 import Data.Proxy
-import Data.UUID (UUID)
+import Data.UUID.Types (UUID)
 import Data.Text (Text)
 
 import Common.Dto

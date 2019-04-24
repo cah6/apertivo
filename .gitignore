@@ -1,2 +1,5 @@
 dist*
-result
+frontend-result
+**/*.hi
+**/*.o
+.ghc*

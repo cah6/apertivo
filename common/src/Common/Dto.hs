@@ -15,7 +15,7 @@ import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import Data.Time.Clock (getCurrentTime)
 import Data.Time.Format (defaultTimeLocale)
 import Data.Time.LocalTime (getCurrentTimeZone, utcToLocalTime, LocalTime(..), TimeOfDay(..))
-import Data.UUID (UUID)
+import Data.UUID.Types (UUID)
 import System.Directory (listDirectory)
 
 import Common.Helper (attoToAeson)

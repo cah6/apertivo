@@ -17,7 +17,7 @@ module GeocodingReflexClient(
   ) where 
 
 import Data.Maybe (listToMaybe, mapMaybe)
-import Data.UUID
+import Data.UUID.Types
 import Reflex.Dom
 import Data.Text hiding (any)
 import Servant.API

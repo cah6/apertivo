@@ -19,7 +19,7 @@ import Data.Map (fromList, Map)
 import Data.Maybe (mapMaybe, maybeToList)
 import Data.Ord (comparing)
 import Data.Time.LocalTime (TimeOfDay(..))
-import Data.UUID (UUID)
+import Data.UUID.Types (UUID)
 import Reflex.Dom.Core
 
 import Common.Dto
