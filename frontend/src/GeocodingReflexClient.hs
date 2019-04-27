@@ -35,7 +35,7 @@ geocoderClients = client api (Proxy @m) (Proxy @()) (constDyn url)
         -- url = BaseFullUrl Http "localhost" 3000 "/"
 
 geoKey :: Text 
-geoKey = "AIzaSyDIwcyVpZTotBpEhNE0S2hI04droAQDPd4"
+geoKey = "AIzaSyDxM3_sjDAP1kDHzbRMkZ6Ky7BYouXfVOs"
 
 -- Reflex bindings to google API, for docs see
 -- http://hackage.haskell.org/package/google-maps-geocoding-0.5.0.0/docs/Web-Google-Geocoding.html
@@ -68,7 +68,7 @@ getCity eCoords = do
       eTrigger = () <$ eLatLng
   dynLatLng <- holdDyn QNone eLatLng
   result <- genBackGeocode dynGeoKey dynLatLng dynQNone dynQNone dynQNone dynQNone eTrigger
-  return $ flattenMaybe' (reqResultToCity <$> result)
+  return $ flattenMaybe' $ traceEvent "Found city" $ (reqResultToCity <$> result)
 
 reqResultToCity :: ReqResult () GeocodingResponse -> Maybe Text
 reqResultToCity result = case result of

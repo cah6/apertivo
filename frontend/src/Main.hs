@@ -61,7 +61,7 @@ frontendHead = do
   -- todo: don't hardcode this! somehow?
   el "style" $ text $ decodeUtf8 $(embedFile "/Users/christian.henry/coding/haskell/apertivo/css/mystyles.css")
   -- el "style" $ text $ decodeUtf8 $(embedFile "/home/cah6/coding/haskell/apertivo/css/mystyles.css")
-  elAttr "script" ("src" =: "https://maps.googleapis.com/maps/api/js?key=AIzaSyDIwcyVpZTotBpEhNE0S2hI04droAQDPd4&libraries=places"
+  elAttr "script" ("src" =: "https://maps.googleapis.com/maps/api/js?key=AIzaSyDZh_dyyl7PJCe-haE_hGOOP7NJCnqdy4k&libraries=places"
       <> "async" =: "true" <> "defer" =: "true") blank
   return ()
 
@@ -86,7 +86,7 @@ searchTab :: MonadWidget t m
   -> m ()
 searchTab ePostBuild eInitQueryResults = elClass "div" "box" $ mdo
   (dow, tod) <- liftIO getCurrentTimeAndDay
-  coords <- eGetLocation
+  coords <- traceEventWith printLocation <$> eGetLocation
   city <- getCity coords
   let filterSectionConfig = FilterSectionConfig dow (roundTimeUp tod) city (toCities <$> eInitQueryResults)
   (dynSearchFilter, eCreateClicked) <- filterSection filterSectionConfig
@@ -111,6 +111,9 @@ searchTab ePostBuild eInitQueryResults = elClass "div" "box" $ mdo
     newlyUpdatedRows <- foldDyn reduceTableUpdate [defaultHH] eTableAction
     return ()
   return ()
+
+printLocation :: Coordinates -> String
+printLocation latLng = "Found user at location: " <> show latLng
 
 toCities :: [HappyHour] -> [T.Text]
 toCities as = nub $ _city <$> as
