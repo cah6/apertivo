@@ -1,8 +1,7 @@
 { lib ? (import <nixpkgs> {}).pkgs.lib
 }:
 let 
-
-  pinnedPkgs = import ./pkgs-from-json.nix { json = ./nixos-18-09.json; };
+  pinnedPkgs = import ../pkgs-from-json.nix { json = ../nixos-18-09.json; };
   myPackages = (import ./backend.nix { withHoogle = false; } );
 
   projectDrvEnv = myPackages.backend.env.overrideAttrs (oldAttrs: rec {
@@ -12,6 +11,7 @@ let
       pinnedPkgs.haskellPackages.hsimport
       ];
     shellHook = ''
+      export ES_PASSWORD=${builtins.readFile ./es_password.secret}
     '';
   });
 in 

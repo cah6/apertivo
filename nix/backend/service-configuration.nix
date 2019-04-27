@@ -13,12 +13,16 @@
       environment.systemPackages = [ backend ];
 
       systemd.services.backend =
-        { description = "Happy Hour Webserver";
+        { 
+          description = "Happy Hour Webserver";
           wantedBy = [ "multi-user.target" ];
           after = [ "network.target" ];
           serviceConfig =
             { ExecStart = "${backend}/bin/backend";
             };
+          environment = {
+            ES_PASSWORD = builtins.readFile ./es_password.secret;
+          };
         };
     };
 }

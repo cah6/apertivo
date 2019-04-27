@@ -19,6 +19,7 @@ import Network.Wai.Handler.Warp
 import Network.Wai.Middleware.Cors
 import Network.Wai.Logger (withStdoutLogger)
 import Servant
+import System.Environment
 import System.IO
 
 import Backend.Interfaces
@@ -78,9 +79,10 @@ nt (MyApp m) = do
 provideEnv :: IO BHEnv
 provideEnv = do
   manager <- newTlsManagerWith tlsSettings
-  return $ addAuth $ mkBHEnv (Server "https://d645aa815ce645b695844914a1ccb37f.us-east-1.aws.found.io:9243/") manager
+  espw <- pack <$> getEnv "ES_PASSWORD"
+  return $ addAuth espw $ mkBHEnv (Server "https://d645aa815ce645b695844914a1ccb37f.us-east-1.aws.found.io:9243/") manager
     where
-  addAuth env = env { bhRequestHook = basicAuthHook (EsUsername "elastic") (EsPassword "JSQfBGf2XwyfRP7Bvv60Jqti") }
+  addAuth pw env = env { bhRequestHook = basicAuthHook (EsUsername "elastic") (EsPassword pw) }
   tlsSettings = mkManagerSettings (TLSSettingsSimple False True True) Nothing
 
 server :: ServerT HappyHourApi MyApp
