@@ -35,7 +35,7 @@ geocoderClients = client api (Proxy @m) (Proxy @()) (constDyn url)
         -- url = BaseFullUrl Http "localhost" 3000 "/"
 
 geoKey :: Text 
-geoKey = "AIzaSyDxM3_sjDAP1kDHzbRMkZ6Ky7BYouXfVOs"
+geoKey = "AIzaSyDyWJp2anF8ETwbRuWNjILh70Tl7qrBfsw"
 
 -- Reflex bindings to google API, for docs see
 -- http://hackage.haskell.org/package/google-maps-geocoding-0.5.0.0/docs/Web-Google-Geocoding.html
