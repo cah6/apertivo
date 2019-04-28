@@ -58,22 +58,25 @@ createFields :: MonadWidget t m
   => HappyHour
   -> m (Dynamic t HappyHour)
 createFields initial = elClass "div" "columns is-multiline" $ do
-  let dynRestaurant = constDyn "Detroit"
   -- dynRestaurant <- elClass "div" "column is-half" $ bubbleInput (initial ^. restaurant) "Restaurant name"
   (e, _) <- elClass "div" "column is-full" $ elDynAttr' "input" (constDyn ("type" =: "text" <> "class" =: "input is-rounded is-primary")) blank
-  eIdLlCity <- eAutocompleteBox (_element_raw e)
+  eAcResults <- eAutocompleteBox (_element_raw e)
   dynLink <- elClass "div" "column is-full" $ bubbleInput (initial ^. link) "Link to description"
-  dynId <- holdDyn (initial ^. placeId) (get1st <$> eIdLlCity) 
-  dynLatLng <- holdDyn (initial ^. latLng) (get2nd <$> eIdLlCity) 
-  dynCity <- holdDyn (initial ^. city) (get3rd <$> eIdLlCity) 
+  dynId <- holdDyn (initial ^. placeId) (eAcResults <^.> acPlaceId . coerce) 
+  dynLatLng <- holdDyn (initial ^. latLng) (_acLatLng <$> eAcResults) 
+  dynCity <- holdDyn (initial ^. city) (eAcResults <^.> acCity . coerce) 
+  dynName <- traceDyn "Restaurant name fetched:" <$> holdDyn (initial ^. restaurant) (eAcResults <^.> acPlaceName . coerce) 
   _ <- elClass "div" "column is-half" $ staticTextBubble "City: use autocomplete" dynCity
   _ <- elClass "div" "column is-half" $ staticTextBubble "Id: use autocomplete" dynId
   dynSchedules <- elClass "div" "column is-full" $ scheduleInput (_schedule initial)
-  return $ HappyHour <$> pure (_id initial) <*> dynCity <*> dynRestaurant <*> dynSchedules <*> dynLink <*> dynLatLng <*> dynId
+  return $ HappyHour <$> pure (_id initial) <*> dynCity <*> dynName <*> dynSchedules <*> dynLink <*> dynLatLng <*> dynId
 
-get1st (x,_,_) = x
-get2nd (_,x,_) = x
-get3rd (_,_,x) = x
+testPlaceId :: Reflex t => Event t AutocompleteResults -> Event t T.Text
+testPlaceId e = e <^.> acPlaceId . coerce
+
+infixl 8 <^.>
+(<^.>) :: Functor f => f s -> Getting b s b -> f b
+(<^.>) e f = view f <$> e
 
 staticTextBubble :: MonadWidget t m => T.Text -> Dynamic t T.Text -> m ()
 staticTextBubble initial placeholder = do

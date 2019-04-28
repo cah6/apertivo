@@ -202,6 +202,19 @@ instance FromJSON Schedule where
     _scheduleDescription  <- o .: "scheduleDescription"
     return Schedule{..}
 
+newtype City = City Text
+  deriving (Generic, Show)
+
+newtype PlaceName = PlaceName Text
+  deriving (Generic, Show)
+
+newtype PlaceId = PlaceId Text
+  deriving (Generic, Show)
+
 -- Make all the lenses
 makeLenses ''HappyHour
 makeLenses ''Schedule
+makeLenses ''LL
+makeLenses ''City
+makeLenses ''PlaceName
+makeLenses ''PlaceId

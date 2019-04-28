@@ -71,9 +71,11 @@ executable frontend
                , common
                , containers
                , ghcjs-dom
+               , google-maps-reflex
                , file-embed
                -- , http-client
                , jsaddle
+               -- , jsaddle-dom
                , jsaddle-warp
                , lens
                , lens-aeson

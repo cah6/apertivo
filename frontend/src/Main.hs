@@ -27,8 +27,9 @@ import Data.Aeson.Lens
 import Data.Bifunctor (first)
 import Data.Coerce (coerce)
 import Data.FileEmbed
+import Data.Functor
 import Data.List (nub, sortBy)
-import Data.Maybe (isJust, listToMaybe)
+import Data.Maybe (isJust, listToMaybe, mapMaybe)
 import Data.Map (fromList, toList, Map)
 import Data.Monoid ((<>))
 import Data.Ord (comparing)
@@ -37,6 +38,7 @@ import Data.UUID.Types (UUID)
 import Language.Javascript.JSaddle (liftJSM)
 import Language.Javascript.JSaddle.Warp
 import Reflex.Dom.Core
+import qualified GoogleMapsReflex as G
 
 import Autocomplete
 import Common.Dto
@@ -95,7 +97,7 @@ searchTab ePostBuild eInitQueryResults = elClass "div" "box" $ mdo
       eQueryResults = QueryResults <$> eInitQueryResults
   eNewUUID <- createHH eCreateSubmitted
   eCreatedWithUUID <- alignLatest (flip $ set id . Just) defaultHH eCreateSubmitted eNewUUID
-  elClass "div" "box" $ elClass "div" "table-container" $ elClass "table" "table is-fullwidth" $ mdo
+  activeRows <- elClass "div" "box" $ elClass "div" "table-container" $ elClass "table" "table is-fullwidth" $ mdo
     el "thead" $
       el "tr" $ do 
         elAttr "th" ("scope" =: "col") $ text "Restaurant"
@@ -109,8 +111,39 @@ searchTab ePostBuild eInitQueryResults = elClass "div" "box" $ mdo
     eEditOrDelete <- mkTableBody (filterHappyHours <$> newlyUpdatedRows <*> dynSearchFilter)
     let eTableAction = leftmost [eQueryResults, SingleCreated <$> eCreatedWithUUID, eEditOrDelete]
     newlyUpdatedRows <- foldDyn reduceTableUpdate [defaultHH] eTableAction
-    return ()
+    return newlyUpdatedRows
+  -- exampleMapsWidget activeRows
   return ()
+
+exampleMapsWidget :: MonadWidget t m 
+  => Dynamic t [HappyHour]
+  -> m ()
+exampleMapsWidget dxs = do
+  let configDyn = hhsToConfig <$> dxs
+
+  (Element _ mapEl, _) <- elAttr' "div" ("style" =: "width: 500px; height: 300px;") blank
+
+  maps <- G.googleMaps mapEl (G.ApiKey "AIzaSyDZh_dyyl7PJCe-haE_hGOOP7NJCnqdy4k") configDyn
+
+  --Get the click event on the map
+  mc <- G.mapEvent G.Click maps 
+
+  d <- holdDyn "" (const "Clicked" <$> mc)
+  el "div" $ dynText d
+
+  return ()
+
+hhsToConfig :: [HappyHour] -> G.Config T.Text
+hhsToConfig xs = def 
+  { G._config_markers = fromList $ map (\hh -> (hh ^. placeId, hhToMarker hh)) $ filter (\hh -> hh ^. placeId /= "") xs
+  }
+
+hhToMarker :: HappyHour -> G.MarkerOptions
+hhToMarker hh = def
+  { G._markerOptions_position = G.LatLng (hh ^. latLng . Common.Dto.latitude) (hh ^. latLng . Common.Dto.longitude)
+  , G._markerOptions_title = hh ^. restaurant
+  , G._markerOptions_animation = Just G.Drop
+  }
 
 printLocation :: Coordinates -> String
 printLocation latLng = "Found user at location: " <> show latLng

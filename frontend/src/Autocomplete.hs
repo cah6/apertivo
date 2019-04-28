@@ -1,5 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -9,31 +11,34 @@
 {-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Autocomplete where
 
-import Control.Lens ((^.))
+import Control.Lens ((^.), makeLenses)
 import Control.Monad (void, when)
 import Control.Monad.IO.Class (MonadIO(..))
 import Control.Concurrent.MVar (takeMVar, putMVar, newEmptyMVar)
 import Data.String (fromString)
-import Data.Text
+import Data.List (find)
+import Data.Text hiding (find)
 import Language.Javascript.JSaddle
 import GHCJS.DOM.Element (Element)
 import Reflex.Dom.Core hiding (Element)
+import GHC.Generics
 
 import Common.Dto
 import FrontendCommon
 
 eAutocompleteBox :: MonadWidget t m
   => Element
-  -> m (Event t (Text, LL, Text))
+  -> m (Event t AutocompleteResults)
 eAutocompleteBox parent = do 
   (onChangeEvent, onChangeCallback) <- newTriggerEvent
   schedulePostBuild $ liftJSM $ autocompleteBox parent $ liftIO . onChangeCallback
   return (flattenMaybe' onChangeEvent)
 
-autocompleteBox :: Element -> (Maybe (Text, LL, Text) -> JSM ()) -> JSM ()
+autocompleteBox :: Element -> (Maybe AutocompleteResults -> JSM ()) -> JSM ()
 autocompleteBox parent = \applyResults -> void $ do
   autocompleteObj <- new (jsg "google" ^. js "maps" . js "places" . js "Autocomplete") (toJSVal parent)
   autocompleteObj ^. jsf "setTypes" [["establishment"]]
@@ -44,15 +49,39 @@ autocompleteBox parent = \applyResults -> void $ do
         location <- placeResult ^. js "geometry" . js "location"
         jsLat <- location ^. js0 "lat"
         jsLng <- location ^. js0 "lng"
+        jsName <- placeResult ^. js "name"
 
-        placeId <- fromJSVal jsPlaceId
+        jsAddressComponents <- placeResult ^. js "address_components"
+
+        placeId <- fmap PlaceId <$> fromJSVal jsPlaceId
         lat <- fromJSVal jsLat
         lng <- fromJSVal jsLng
+        name <- fmap PlaceName <$> fromJSVal jsName
+        addressComponents <- fromJSVal jsAddressComponents
 
+        let city = getCityFromComponents <$> addressComponents
         let latlng = LL <$> lat <*> lng
-        -- TODO: get city from address_components: long_name when types contains "locality"
-        applyResults $ (,,) <$> placeId <*> latlng <*> pure (fromString "Detroit")
+
+        applyResults $ AutocompleteResults <$> placeId <*> city <*> latlng <*> name
     )
+
+getCityFromComponents :: [AddressComponent] -> City
+getCityFromComponents xs = case find (\ac -> elem (pack "locality") (types ac)) xs of 
+  Nothing -> City $ pack "City not found"
+  Just ac -> City $ short_name ac
+
+data AutocompleteResults = AutocompleteResults 
+  { _acPlaceId :: PlaceId
+  , _acCity :: City
+  , _acLatLng :: LL
+  , _acPlaceName :: PlaceName
+  }
+
+data AddressComponent = AddressComponent
+  { long_name :: Text
+  , short_name :: Text
+  , types :: [Text]
+  } deriving (Generic, Show, FromJSVal)
 
 makeLatLngBounds :: JSM Object
 makeLatLngBounds = do 
@@ -71,3 +100,5 @@ testme = do
 
 printJSE fun = catch fun $ \(JSException e) -> 
     (valToText e) >>= (liftIO . putStrLn . show) >> return e
+
+makeLenses ''AutocompleteResults

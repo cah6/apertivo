@@ -2,30 +2,32 @@ code size summary per package:
 
 aeson-1.3.1.1-CHDc5msaeddCCXUbebUyxa:423342
 attoparsec-0.13.2.2-H7tZr3Tzq6H4zklfnS3VAb:111902
-base:                    909608
+base:                    910140
 bimap-0.3.3-FEJIYIPyt0a1m1kq6Ht3o3:2950
 bytestring-0.10.8.2-ACj33vFBMyeAi499Z0Sdp2:78848
 case-insensitive-1.2.0.11-330MxIKKuUGEzVbWE8uMKQ:247433
 common-0.1.0.0-3Wgz6iDojfQ88IQaIPbbQw:4585
 constraints-0.10.1-AQv2dg43g4Z95EMLbkDdp7:116771
-containers-0.5.11.0-GhhPXbBZ8rf1WBQjAVqqMW:240614
+containers-0.5.11.0-GhhPXbBZ8rf1WBQjAVqqMW:248341
 dependent-map-0.2.4.0-DMPMYlmG4cR7elSMvzoKhG:56141
 dependent-sum-0.4.1-67rHSI4dU4Eh1zqJOAHqu:18861
-ghc-prim:                350093
-ghcjs-base-0.2.0.0-1zqNn6nIHQdAmmILf3TTxp:22747
-ghcjs-dom-jsffi-0.9.2.0-GnWNSjUvOFlLG3HjZwWTpH:99991
+ghc-prim:                361302
+ghcjs-base-0.2.0.0-1zqNn6nIHQdAmmILf3TTxp:25944
+ghcjs-dom-jsffi-0.9.2.0-GnWNSjUvOFlLG3HjZwWTpH:99322
 ghcjs-prim-0.1.1.0-A1JdvSlggG4AS5cM95oali:7953
+google-maps-reflex-0.1.0.0-1x8i0fOoF28ALGcKZ1G4ya:165434
 http-api-data-0.3.8.1-7Wk9MvGR6z7L1WHFkeLirh:28194
 http-media-0.7.1.2-IYRl8xE8KCFEbsTSc3lE1:36386
 http-types-0.12.1-5ouB919OtKF3jMCH8N77cF:20521
 integer-gmp:             6923
 integer-logarithms-1.0.2.1-9ucJbGf50XaJLyDFSbwT2O:1009
-jsaddle-0.9.5.0-65yGl3Rldw7IlU8Ll0REX6:11428
-main:                    1466042
+jsaddle-0.9.5.0-65yGl3Rldw7IlU8Ll0REX6:6259
+jsaddle-dom-0.9.2.0-4OJvzDxuW2hH9btdIZJKOq:42944
+main:                    1498352
 network-uri-2.6.1.0-6vHdqSfkPCvJuZRl7quooX:594
 primitive-0.6.3.0-EN7G6bIUziYESvlw7SsQBc:1628
 ref-tf-0.4.0.1-I3N9TyOnTSb5BoggGxOx1D:201
-reflex-0.5-F0of3DpR7RECyZ4LjNrpSw:1237574
+reflex-0.5-F0of3DpR7RECyZ4LjNrpSw:1239643
 reflex-dom-core-0.4-2a86yvKhCSZKEuMoYVKfxR:1269950
 scientific-0.3.6.2-3bGnf1kyXWv6Dpb9HHlxdN:61191
 servant-0.14.1-EtigiSKNbQYGJtb5XbKkci:35866
@@ -37,7 +39,7 @@ transformers-0.5.5.0-8ZjexgxxdBLH8OWn8CZkwx:9069
 unbounded-delays-0.1.1.0-5V6xLCeZh6nLs8o37BDuBe:1420
 unordered-containers-0.2.9.0-B7SZEdBz7ZoCXUlirxn3fJ:26331
 uuid-types-1.0.3-G6XnBMWL2uvGvo378viMSw:928
-vector-0.12.0.1-1pr78lTTb89JTR1g6hNATq:22821
+vector-0.12.0.1-1pr78lTTb89JTR1g6hNATq:51103
 
 
 code size per module:
@@ -80,7 +82,7 @@ base
     Data.Traversable:                   338
     Data.Tuple:                         219
     Data.Type.Coercion:                 558
-    Data.Type.Equality:                 70101
+    Data.Type.Equality:                 70117
     Data.Typeable.Internal:             4868
     Debug.Trace:                        10697
     Foreign.C.Error:                    425
@@ -118,7 +120,7 @@ base
     GHC.IO.Handle.Types:                418
     GHC.IO.Unsafe:                      159
     GHC.IORef:                          5783
-    GHC.Int:                            16078
+    GHC.Int:                            16594
     GHC.List:                           472
     GHC.MVar:                           3312
     GHC.Num:                            174
@@ -167,8 +169,8 @@ constraints-0.10.1-AQv2dg43g4Z95EMLbkDdp7
 
 containers-0.5.11.0-GhhPXbBZ8rf1WBQjAVqqMW
     Data.IntMap.Internal:               43789
-    Data.IntMap.Strict:                 120031
-    Data.Map.Internal:                  10121
+    Data.IntMap.Strict:                 125241
+    Data.Map.Internal:                  12638
     Data.Map.Strict.Internal:           116
     Data.Set.Internal:                  964
     Utils.Containers.Internal.StrictPair:65593
@@ -183,11 +185,11 @@ dependent-sum-0.4.1-67rHSI4dU4Eh1zqJOAHqu
     Data.Some:                          7057
 
 ghc-prim
-    GHC.CString:                        35485
+    GHC.CString:                        36946
     GHC.Classes:                        451
     GHC.IntWord64:                      3052
     GHC.Tuple:                          4226
-    GHC.Types:                          306879
+    GHC.Types:                          316627
 
 ghcjs-base-0.2.0.0-1zqNn6nIHQdAmmILf3TTxp
     Data.JSString:                      1506
@@ -195,8 +197,8 @@ ghcjs-base-0.2.0.0-1zqNn6nIHQdAmmILf3TTxp
     Data.JSString.Internal.Fusion.Types:268
     Data.JSString.Internal.Type:        949
     Data.JSString.Raw:                  1634
-    GHCJS.Buffer:                       1282
-    GHCJS.Foreign.Internal:             4301
+    GHCJS.Buffer:                       1474
+    GHCJS.Foreign.Internal:             7306
     GHCJS.Marshal:                      8605
     GHCJS.Marshal.Internal:             1277
     GHCJS.Marshal.Pure:                 571
@@ -213,11 +215,33 @@ ghcjs-dom-jsffi-0.9.2.0-GnWNSjUvOFlLG3HjZwWTpH
     GHCJS.DOM.JSFFI.Generated.GlobalEventHandlers:585
     GHCJS.DOM.JSFFI.Generated.XMLHttpRequest:7786
     GHCJS.DOM.JSFFI.XMLHttpRequest:     73315
-    GHCJS.DOM.Types:                    670
+    GHCJS.DOM.Types:                    1
 
 ghcjs-prim-0.1.1.0-A1JdvSlggG4AS5cM95oali
     GHCJS.Prim:                         3796
     GHCJS.Prim.Internal:                4157
+
+google-maps-reflex-0.1.0.0-1x8i0fOoF28ALGcKZ1G4ya
+    GoogleMapsReflex.Common:            29733
+    GoogleMapsReflex.GoogleMaps:        5863
+    GoogleMapsReflex.JSTypes.InfoWindow:2971
+    GoogleMapsReflex.JSTypes.LatLng:    14934
+    GoogleMapsReflex.JSTypes.MapOptionsTypes.ControlPosition:296
+    GoogleMapsReflex.JSTypes.MapOptionsTypes.FullscreenControlOptions:999
+    GoogleMapsReflex.JSTypes.MapOptionsTypes.GestureHandling:32338
+    GoogleMapsReflex.JSTypes.MapOptionsTypes.MapOptions:15911
+    GoogleMapsReflex.JSTypes.MapOptionsTypes.MapType:812
+    GoogleMapsReflex.JSTypes.MapOptionsTypes.PanControlOptions:836
+    GoogleMapsReflex.JSTypes.MapOptionsTypes.RotateControlOptions:1801
+    GoogleMapsReflex.JSTypes.MapOptionsTypes.ScaleControl:12160
+    GoogleMapsReflex.JSTypes.Marker:    2961
+    GoogleMapsReflex.JSTypes.Point:     4420
+    GoogleMapsReflex.JSTypes.Size:      2807
+    GoogleMapsReflex.MapEvent:          15901
+    GoogleMapsReflex.MapsApi:           10850
+    GoogleMapsReflex.MapsLoader:        1035
+    GoogleMapsReflex.Types:             8136
+    GoogleMapsReflex.Widget:            670
 
 http-api-data-0.3.8.1-7Wk9MvGR6z7L1WHFkeLirh
     Web.Internal.HttpApiData:           28194
@@ -239,17 +263,25 @@ integer-logarithms-1.0.2.1-9ucJbGf50XaJLyDFSbwT2O
 
 jsaddle-0.9.5.0-65yGl3Rldw7IlU8Ll0REX6
     Language.Javascript.JSaddle.Arguments:609
-    Language.Javascript.JSaddle.Exception:3338
-    Language.Javascript.JSaddle.Object: 81
-    Language.Javascript.JSaddle.Value:  7400
+    Language.Javascript.JSaddle.Exception:670
+    Language.Javascript.JSaddle.Marshal.String:3338
+    Language.Javascript.JSaddle.Object: 1641
+    Language.Javascript.JSaddle.Value:  1
+
+jsaddle-dom-0.9.2.0-4OJvzDxuW2hH9btdIZJKOq
+    JSDOM:                              4080
+    JSDOM.Generated.Document:           4278
+    JSDOM.Generated.Element:            3605
+    JSDOM.Generated.Node:               23581
+    JSDOM.Types:                        7400
 
 main
-    Autocomplete:                       331162
+    Autocomplete:                       333317
     CreateModal:                        149905
     FilterArea:                         48300
     FrontendCommon:                     30901
     GeocodingReflexClient:              33992
-    GetLocation:                        275653
+    GetLocation:                        305808
     Main:                               40189
     ServantReflexClient:                223170
     Web.Google.Geocoding:               243971
@@ -272,7 +304,7 @@ reflex-0.5-F0of3DpR7RECyZ4LjNrpSw
     Data.WeakBag:                       8359
     Reflex.Adjustable.Class:            62563
     Reflex.Class:                       49512
-    Reflex.Collection:                  13312
+    Reflex.Collection:                  15381
     Reflex.Dynamic:                     706
     Reflex.FastWeak:                    2904
     Reflex.Host.Class:                  879
@@ -366,9 +398,9 @@ uuid-types-1.0.3-G6XnBMWL2uvGvo378viMSw
 
 vector-0.12.0.1-1pr78lTTb89JTR1g6hNATq
     Data.Vector:                        728
-    Data.Vector.Mutable:                22093
+    Data.Vector.Mutable:                50375
 
 
 
-packed metadata: 1603139
+packed metadata: 1707264
 

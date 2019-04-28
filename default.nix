@@ -20,7 +20,9 @@ reflex-platform.project ({ pkgs, ... }: {
     http-media = pkgs.haskell.lib.dontCheck super.http-media;
     servant = pkgs.haskell.lib.dontCheck super.servant;
     lens-aeson = pkgs.haskell.lib.dontCheck super.lens-aeson;
+    # jsaddle-dom = self.callPackage ./nix/jsaddle-dom.nix { };
     servant-reflex = self.callPackage ./nix/servant-reflex.nix { };
+    google-maps-reflex = self.callPackage ./nix/google-maps-reflex.nix { };
   };
 
   # shellToolOverrides = ghc: super: {
