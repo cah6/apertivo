@@ -232,8 +232,8 @@ dayMatches daysFilter a =
       dayMatch ds = null daysFilter || (not . null . intersect daysFilter) ds
       matchingSchedules :: [Schedule]
       matchingSchedules = filter (dayMatch . _days) (_schedule a)
-  in  if (length matchingSchedules == length (_schedule a)) 
-        then Just a 
+  in  if (length matchingSchedules == 0) 
+        then Nothing
         else Just $ a { _schedule = matchingSchedules }
 
 timeMatches :: Maybe TimeOfDay -> HappyHour -> Maybe HappyHour
@@ -241,8 +241,8 @@ timeMatches Nothing a = Just a
 timeMatches (Just timeFilter) a = 
   let matchingSchedules :: [Schedule]
       matchingSchedules = filter (isTimeBetween timeFilter . _time) (_schedule a)
-  in  if (length matchingSchedules == length (_schedule a)) 
-        then Just a 
+  in  if (length matchingSchedules == 0) 
+        then Nothing
         else Just $ a { _schedule = matchingSchedules }
 
 isTimeBetween :: TimeOfDay -> TimeRange -> Bool

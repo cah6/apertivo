@@ -30,6 +30,19 @@ import GHC.Generics
 import Common.Dto
 import FrontendCommon
 
+eFilledGlobalVal :: MonadWidget t m
+  => m (Event t ())
+eFilledGlobalVal = do 
+  (onChangeEvent, onChangeCallback) <- newTriggerEvent
+  schedulePostBuild $ liftJSM $ fillGlobalVal $ liftIO . onChangeCallback
+  return onChangeEvent
+
+fillGlobalVal :: (() -> JSM ()) -> JSM ()
+fillGlobalVal = \fillMe -> void $ do 
+  setProp (toJSString "mapsLoaded") jsTrue global
+  -- global ^. jss "mapsLoaded" $ undefined
+  fillMe ()
+
 eAutocompleteBox :: MonadWidget t m
   => Element
   -> m (Event t AutocompleteResults)

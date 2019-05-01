@@ -28,7 +28,7 @@ import Data.Bifunctor (first)
 import Data.Coerce (coerce)
 import Data.FileEmbed
 import Data.Functor
-import Data.List (nub, sortBy)
+import Data.List (nub, sortBy, length)
 import Data.Maybe (isJust, listToMaybe, mapMaybe)
 import Data.Map (fromList, toList, Map)
 import Data.Monoid ((<>))
@@ -65,6 +65,7 @@ frontendHead = do
   -- el "style" $ text $ decodeUtf8 $(embedFile "/home/cah6/coding/haskell/apertivo/css/mystyles.css")
   elAttr "script" ("src" =: "https://maps.googleapis.com/maps/api/js?key=AIzaSyDZh_dyyl7PJCe-haE_hGOOP7NJCnqdy4k&libraries=places"
       <> "async" =: "true" <> "defer" =: "true") blank
+  eFilledGlobalVal
   return ()
 
 body :: forall t m. MonadWidget t m => m ()
@@ -108,10 +109,11 @@ searchTab ePostBuild eInitQueryResults = elClass "div" "box" $ mdo
         elAttr "th" ("scope" =: "col" <> "class" =: "is-hidden-mobile") $ text "Action"
         return ()
         -- mapM_ (elAttr "th" ("scope" =: "col" ) . text) cols
-    eEditOrDelete <- mkTableBody (filterHappyHours <$> newlyUpdatedRows <*> dynSearchFilter)
+    activeRows <- return $ filterHappyHours <$> newlyUpdatedRows <*> dynSearchFilter
+    eEditOrDelete <- mkTableBody activeRows
     let eTableAction = leftmost [eQueryResults, SingleCreated <$> eCreatedWithUUID, eEditOrDelete]
     newlyUpdatedRows <- foldDyn reduceTableUpdate [defaultHH] eTableAction
-    return newlyUpdatedRows
+    return activeRows
   -- exampleMapsWidget activeRows
   return ()
 
@@ -121,28 +123,55 @@ exampleMapsWidget :: MonadWidget t m
 exampleMapsWidget dxs = do
   let configDyn = hhsToConfig <$> dxs
 
-  (Element _ mapEl, _) <- elAttr' "div" ("style" =: "width: 500px; height: 300px;") blank
+  (Element _ mapEl, _) <- elAttr' "div" ("style" =: "width: 800px; height: 600px;") blank
 
   maps <- G.googleMaps mapEl (G.ApiKey "AIzaSyDZh_dyyl7PJCe-haE_hGOOP7NJCnqdy4k") configDyn
 
   --Get the click event on the map
-  mc <- G.mapEvent G.Click maps 
-
-  d <- holdDyn "" (const "Clicked" <$> mc)
-  el "div" $ dynText d
-
+  -- mc <- G.mapEvent G.Click maps 
+  -- d <- holdDyn "" (const "Clicked" <$> mc)
+  -- el "div" $ dynText d
   return ()
 
 hhsToConfig :: [HappyHour] -> G.Config T.Text
 hhsToConfig xs = def 
-  { G._config_markers = fromList $ map (\hh -> (hh ^. placeId, hhToMarker hh)) $ filter (\hh -> hh ^. placeId /= "") xs
+  { G._config_markers = fromList $ map (\hh -> (hh ^. placeId, hhToMarker hh)) $ availablePlaces
+  , G._config_infoWindows = fromList $ map (\hh -> (hh ^. placeId, hhToInfoWindowState hh)) $ availablePlaces
+  , G._config_mapOptions = def 
+    { G._mapOptions_center = G.LatLng 42.363368799999996 (negate 83.0643899)
+    , G._mapOptions_zoom = 13
+    , G._mapOptions_disableDefaultUI = True
+    , G._mapOptions_scrollwheel = False
+    }
   }
+    where
+  availablePlaces = filter (\hh -> hh ^. placeId /= "") xs
 
 hhToMarker :: HappyHour -> G.MarkerOptions
 hhToMarker hh = def
   { G._markerOptions_position = G.LatLng (hh ^. latLng . Common.Dto.latitude) (hh ^. latLng . Common.Dto.longitude)
   , G._markerOptions_title = hh ^. restaurant
   , G._markerOptions_animation = Just G.Drop
+  , G._markerOptions_cursor = Nothing
+  , G._markerOptions_clickable = True
+  }
+
+hhToInfoWindowState :: HappyHour -> G.InfoWindowState
+hhToInfoWindowState hh = G.InfoWindowState 
+  { G._infoWindowState_options = G.InfoWindowOptions 
+    { G._infoWindowOptions_content = G.ContentText $ hh ^. restaurant
+    , G._infoWindowOptions_disableAutoPan = True
+    , G._infoWindowOptions_maxWidth = 200
+    , G._infoWindowOptions_pixelOffset = G.Size 
+      { _size_width = 0
+      , _size_height = -40
+      , _size_widthUnit = Nothing
+      , _size_heightUnit = Nothing
+      }
+    , G._infoWindowOptions_position = G.LatLng (hh ^. latLng . Common.Dto.latitude) (hh ^. latLng . Common.Dto.longitude)
+    , G._infoWindowOptions_zIndex = 0
+    }
+  , G._infoWindowState_open = True
   }
 
 printLocation :: Coordinates -> String

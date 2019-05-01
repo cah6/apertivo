@@ -4,5 +4,6 @@
     ":set -fdefer-type-errors -fdefer-typed-holes -fdefer-out-of-scope-variables",
     ":set -ifrontend/src:common/src:backend/src"
   ],
-  "ghcSimple.workspaceType": "cabal"
+  "ghcSimple.workspaceType": "cabal",
+  "ghcSimple.feature.rangeType": false
 }
