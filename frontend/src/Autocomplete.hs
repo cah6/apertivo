@@ -30,6 +30,19 @@ import GHC.Generics
 import Common.Dto
 import FrontendCommon
 
+printJSValEvent :: MonadWidget t m
+  => Event t JSVal
+  -> m (Event t String)
+printJSValEvent e = do 
+  (onChangeEvent, onChangeCallback) <- newTriggerEvent
+  schedulePostBuild $ liftJSM $ fillJSVal e $ liftIO . (\e -> return ())
+  return onChangeEvent
+
+fillJSVal :: Event t JSVal -> (Event t JSVal -> JSM ()) -> JSM ()
+fillJSVal e = \needJSVal -> void $ do 
+  
+  needJSVal e
+
 eFilledGlobalVal :: MonadWidget t m
   => m (Event t ())
 eFilledGlobalVal = do 

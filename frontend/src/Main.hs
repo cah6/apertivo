@@ -33,9 +33,10 @@ import Data.Maybe (isJust, listToMaybe, mapMaybe)
 import Data.Map (fromList, toList, Map)
 import Data.Monoid ((<>))
 import Data.Ord (comparing)
+import Data.JSString (unpack)
 import Data.Text.Encoding (decodeUtf8)
 import Data.UUID.Types (UUID)
-import Language.Javascript.JSaddle (liftJSM)
+import Language.Javascript.JSaddle (liftJSM, JSVal, JSM, fromJSVal, showJSValue, valToJSON, MonadJSM)
 import Language.Javascript.JSaddle.Warp
 import Reflex.Dom.Core
 import qualified GoogleMapsReflex as G
@@ -69,11 +70,15 @@ frontendHead = do
   return ()
 
 body :: forall t m. MonadWidget t m => m ()
-body = do
+body = mdo
   _ <- makeHero
   started <- getPostBuild
   eQueryResults <- queryHH started
-  _ <- searchTab started (sortBy (comparing _restaurant) <$> eQueryResults)
+  --elClass "footer" "footer" $ elAttr "div" ("class" =: "content" <> "flex-direction" =: "column") $ text "Hello"
+  let eInitQueryResults = (sortBy (comparing _restaurant) <$> eQueryResults) 
+  (dynSearchFilter, eCreateClicked) <- filterHeaders eInitQueryResults
+  exampleMapsWidget activeRows
+  activeRows <- searchTab eInitQueryResults dynSearchFilter eCreateClicked
   return ()
 
 makeHero :: MonadWidget t m => m ()
@@ -84,15 +89,11 @@ makeHero =
       elClass "h2" "subtitle" $ text "The Happy Hour Finder"
 
 searchTab :: MonadWidget t m 
-  => Event t ()
-  -> Event t [HappyHour] 
-  -> m ()
-searchTab ePostBuild eInitQueryResults = elClass "div" "box" $ mdo
-  (dow, tod) <- liftIO getCurrentTimeAndDay
-  coords <- traceEventWith printLocation <$> eGetLocation
-  city <- getCity coords
-  let filterSectionConfig = FilterSectionConfig dow (roundTimeUp tod) city (toCities <$> eInitQueryResults)
-  (dynSearchFilter, eCreateClicked) <- filterSection filterSectionConfig
+  => Event t [HappyHour] 
+  -> Dynamic t SearchFilter
+  -> Event t ()
+  -> m (Dynamic t [HappyHour])
+searchTab eInitQueryResults dynSearchFilter eCreateClicked = elAttr "footer" ("class" =: "footer" <> "style" =: "position: absolute; bottom: 0; width: 100%; height: 20%; background-color: transparent;") $ mdo
   dynMaybeHH <- removingModal ((\_ -> defaultHH { _schedule = [defaultSchedule]}) <$> eCreateClicked) createModal
   let eCreateSubmitted = switchDyn $ flattenMaybe <$> dynMaybeHH
       eQueryResults = QueryResults <$> eInitQueryResults
@@ -110,12 +111,21 @@ searchTab ePostBuild eInitQueryResults = elClass "div" "box" $ mdo
         return ()
         -- mapM_ (elAttr "th" ("scope" =: "col" ) . text) cols
     activeRows <- return $ filterHappyHours <$> newlyUpdatedRows <*> dynSearchFilter
-    eEditOrDelete <- mkTableBody activeRows
+    eEditOrDelete <- mkTableBody newlyUpdatedRows activeRows
     let eTableAction = leftmost [eQueryResults, SingleCreated <$> eCreatedWithUUID, eEditOrDelete]
     newlyUpdatedRows <- foldDyn reduceTableUpdate [defaultHH] eTableAction
     return activeRows
-  -- exampleMapsWidget activeRows
-  return ()
+  return activeRows
+
+filterHeaders :: MonadWidget t m
+  => Event t [HappyHour]
+  -> m (Dynamic t SearchFilter, Event t ())
+filterHeaders eInitQueryResults = elAttr "div" ("class" =: "box" <> "style" =: "position: absolute; z-index: 90; width: 100%;") $ do 
+  (dow, tod) <- liftIO getCurrentTimeAndDay
+  coords <- traceEventWith printLocation <$> eGetLocation
+  city <- getCity coords
+  let filterSectionConfig = FilterSectionConfig dow (roundTimeUp tod) city (toCities <$> eInitQueryResults)
+  filterSection filterSectionConfig
 
 exampleMapsWidget :: MonadWidget t m 
   => Dynamic t [HappyHour]
@@ -123,15 +133,22 @@ exampleMapsWidget :: MonadWidget t m
 exampleMapsWidget dxs = do
   let configDyn = hhsToConfig <$> dxs
 
-  (Element _ mapEl, _) <- elAttr' "div" ("style" =: "width: 800px; height: 600px;") blank
+  (Element _ mapEl, _) <- elAttr' "div" ("style" =: "width: 100%; height: 87%; position: absolute;") blank
 
   maps <- G.googleMaps mapEl (G.ApiKey "AIzaSyDZh_dyyl7PJCe-haE_hGOOP7NJCnqdy4k") configDyn
 
-  --Get the click event on the map
-  -- mc <- G.mapEvent G.Click maps 
-  -- d <- holdDyn "" (const "Clicked" <$> mc)
-  -- el "div" $ dynText d
+  eJSVal :: Event t JSVal <- G.mapEvent G.Click maps 
+  eJson <- performEvent (valToString <$> eJSVal)
+  d <- holdDyn "" (const "Clicked" <$> traceEventWith (\z -> "Clicked with result: " <> show z) eJson)
+  el "div" $ dynText d
   return ()
+
+valToString :: MonadJSM m
+  => JSVal
+  -> m String
+valToString eVal = do 
+  json <- liftJSM $ valToJSON eVal
+  return $ unpack json
 
 hhsToConfig :: [HappyHour] -> G.Config T.Text
 hhsToConfig xs = def 
@@ -150,7 +167,7 @@ hhsToConfig xs = def
 hhToMarker :: HappyHour -> G.MarkerOptions
 hhToMarker hh = def
   { G._markerOptions_position = G.LatLng (hh ^. latLng . Common.Dto.latitude) (hh ^. latLng . Common.Dto.longitude)
-  , G._markerOptions_title = hh ^. restaurant
+  , G._markerOptions_title = "" --hh ^. restaurant
   , G._markerOptions_animation = Just G.Drop
   , G._markerOptions_cursor = Nothing
   , G._markerOptions_clickable = True
@@ -192,12 +209,15 @@ alignLatest f defA eA eB = do
   dynLeft <- holdDyn defA eA
   return $ attachPromptlyDynWith f dynLeft eB
 
-mkTableBody :: MonadWidget t m => Dynamic t [HappyHour] -> m (Event t TableUpdate)
-mkTableBody xs = do 
-  let rows = simpleList xs makeTableSection
+mkTableBody :: MonadWidget t m 
+  => Dynamic t [HappyHour]
+  -> Dynamic t [HappyHour]
+  -> m (Event t TableUpdate)
+mkTableBody allRows displayRows = do 
+  let rows = simpleList displayRows makeTableSection
   (eDelete, eEdit) <- flattenDynList <$> el "tbody" rows
   _ <- deleteHH (coerce <$> eDelete)
-  dynMaybeHH <- removingModal (openModalEvent xs eEdit) createModal
+  dynMaybeHH <- removingModal (openModalEvent allRows eEdit) createModal
   let eDeleteHappened = fmap (\(DeleteClicked uuid) -> SingleDeleted uuid) eDelete
       eEditForServant = switchDyn $ flattenMaybe <$> dynMaybeHH
       eEditHappened = SingleEdited <$> eEditForServant
@@ -357,7 +377,7 @@ removingModal showm modalBody = do
   where
     removeFromDOMWrapper Nothing = return (Nothing, never)
     removeFromDOMWrapper (Just a) =
-      elClass "div" "modal is-active" $
+      elAttr "div" ("class" =: "modal is-active" <> "style" =: "z-index: 90") $
         first Just <$> modalBody a
 
 -- mkGoogleMapsFrame :: MonadWidget t m => m ()

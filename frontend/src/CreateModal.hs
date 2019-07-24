@@ -76,7 +76,7 @@ testPlaceId e = e <^.> acPlaceId . coerce
 
 infixl 8 <^.>
 (<^.>) :: Functor f => f s -> Getting b s b -> f b
-(<^.>) e f = view f <$> e
+(<^.>) e f = over mapped (view f) e
 
 staticTextBubble :: MonadWidget t m => T.Text -> Dynamic t T.Text -> m ()
 staticTextBubble initial placeholder = do
