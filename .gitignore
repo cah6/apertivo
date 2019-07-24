@@ -5,3 +5,4 @@ frontend-result
 .ghc*
 **/*.secret
 result
+.saas-cache/
